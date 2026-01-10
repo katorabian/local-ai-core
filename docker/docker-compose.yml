@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   core-check:
     image: busybox
@@ -14,4 +12,13 @@ services:
       "
     volumes:
       - "F:/katorabian:/ai-core"
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - "F:/katorabian/data/models:/root/.ollama"
     restart: unless-stopped
