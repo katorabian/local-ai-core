@@ -1,4 +1,4 @@
-package com.katorabian.ollama
+package com.katorabian.llm.ollama
 
 import kotlinx.serialization.Serializable
 

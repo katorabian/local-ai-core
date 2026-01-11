@@ -1,5 +1,8 @@
-package com.katorabian.ollama
+package com.katorabian.llm.ollama
 
+import com.katorabian.domain.ChatMessage
+import com.katorabian.domain.enum.Role
+import com.katorabian.llm.LlmClient
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -10,7 +13,9 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
-object OllamaClient {
+class OllamaClient(
+    private val baseUrl: String = "http://localhost:11434"
+): LlmClient {
 
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -18,12 +23,17 @@ object OllamaClient {
         }
     }
 
-    suspend fun chat(prompt: String): String {
-        val response = client.post("http://localhost:11434/api/generate") {
+    override suspend fun generate(
+        model: String,
+        messages: List<ChatMessage>
+    ): String {
+        val prompt = buildPrompt(messages)
+
+        val response = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
             setBody(
                 OllamaRequest(
-                    model = "llama3.2:3b",
+                    model = model,
                     prompt = prompt,
                     stream = false
                 )
@@ -33,6 +43,18 @@ object OllamaClient {
         return response.response
     }
 
+    override suspend fun stream(
+        model: String,
+        messages: List<ChatMessage>,
+        onToken: suspend (String) -> Unit
+    ) {
+        // пока не используем — заглушка
+        generate(model, messages).forEach {
+            onToken(it.toString())
+        }
+    }
+
+/*
     suspend fun chatStream(
         prompt: String,
         onToken: (String) -> Unit
@@ -57,6 +79,18 @@ object OllamaClient {
             onToken(chunk.response)
 
             if (chunk.done) break
+        }
+    }
+*/
+
+
+    private fun buildPrompt(messages: List<ChatMessage>): String {
+        return messages.joinToString("\n") { msg ->
+            when (msg.role) {
+                Role.SYSTEM -> "System: ${msg.content}"
+                Role.USER -> "User: ${msg.content}"
+                Role.ASSISTANT -> "Assistant: ${msg.content}"
+            }
         }
     }
 }

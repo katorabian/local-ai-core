@@ -31,7 +31,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.katorabian.ApplicationKt")
+    mainClass.set("com.katorabian.application.ApplicationKt")
 }
 kotlin {
     jvmToolchain(21)
