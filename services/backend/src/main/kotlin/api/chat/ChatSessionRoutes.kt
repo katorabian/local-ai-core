@@ -23,13 +23,51 @@ fun Route.chatSessionRoutes(chatService: ChatService) {
         val response = chatService.sendMessage(sessionId, req.message)
         call.respond(mapOf("content" to response.content))
     }
+
+    get("/api/v1/chat/sessions") {
+        val sessions = chatService.listSessions()
+        call.respond(
+            sessions.map {
+                ChatSessionDto(
+                    id = it.id.toString(),
+                    model = it.model,
+                    createdAt = it.createdAt.toString()
+                )
+            }
+        )
+    }
+
+    get("/api/v1/chat/sessions/{id}") {
+        val sessionId = UUID.fromString(call.parameters["id"])
+        val session = chatService.getSession(sessionId)
+            ?: return@get call.respondText(
+                "Session not found",
+                status = io.ktor.http.HttpStatusCode.NotFound
+            )
+
+        call.respond(
+            ChatSessionDto(
+                id = session.id.toString(),
+                model = session.model,
+                createdAt = session.createdAt.toString()
+            )
+        )
+    }
+
+    get("/api/v1/chat/sessions/{id}/messages") {
+        val sessionId = UUID.fromString(call.parameters["id"])
+        val messages = chatService.getSessionMessages(sessionId)
+
+        call.respond(
+            messages.map {
+                ChatMessageDto(
+                    id = it.id.toString(),
+                    role = it.role.name.lowercase(),
+                    content = it.content,
+                    createdAt = it.createdAt.toString()
+                )
+            }
+        )
+    }
+
 }
-
-@Serializable
-data class CreateSessionRequest(val model: String)
-
-@Serializable
-data class CreateSessionResponse(val sessionId: String)
-
-@Serializable
-data class SendMessageRequest(val message: String)

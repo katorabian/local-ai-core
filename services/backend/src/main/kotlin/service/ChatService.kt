@@ -85,4 +85,14 @@ class ChatService(
             onToken = onToken
         )
     }
+
+    fun listSessions(): List<ChatSession> =
+        store.getAllSessions()
+
+    fun getSession(sessionId: UUID): ChatSession? =
+        store.getSession(sessionId)
+
+    fun getSessionMessages(sessionId: UUID): List<ChatMessage> =
+        store.getMessages(sessionId)
+
 }

@@ -23,4 +23,8 @@ class ChatSessionStore {
 
     fun getMessages(sessionId: UUID): List<ChatMessage> =
         messages[sessionId]?.toList() ?: emptyList()
+
+    fun getAllSessions(): List<ChatSession> =
+        sessions.values.sortedBy { it.createdAt }
+
 }
