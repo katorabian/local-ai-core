@@ -1,5 +1,6 @@
 package com.katorabian.application
 
+import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.llm.ollama.OllamaClient
 import com.katorabian.service.ChatService
 import io.ktor.serialization.kotlinx.json.*
@@ -31,13 +32,15 @@ fun main() {
 
                 val session = chatService.createSession(req.model)
                 val response = chatService.sendMessage(session, req.message)
-                println(response)
+
                 call.respond(
                     ChatResponse(
                         content = response.content
                     )
                 )
             }
+
+            chatStreamRoute(chatService)
         }
     }.start(wait = true)
 }

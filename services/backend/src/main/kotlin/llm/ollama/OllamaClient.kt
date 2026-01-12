@@ -48,22 +48,13 @@ class OllamaClient(
         messages: List<ChatMessage>,
         onToken: suspend (String) -> Unit
     ) {
-        // пока не используем — заглушка
-        generate(model, messages).forEach {
-            onToken(it.toString())
-        }
-    }
+        val prompt = buildPrompt(messages)
 
-/*
-    suspend fun chatStream(
-        prompt: String,
-        onToken: (String) -> Unit
-    ) {
-        val channel = client.post("http://localhost:11434/api/generate") {
+        val channel = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
             setBody(
                 OllamaRequest(
-                    model = "llama3.2:3b",
+                    model = model,
                     prompt = prompt,
                     stream = true
                 )
@@ -76,13 +67,13 @@ class OllamaClient(
             val line = channel.readUTF8Line(DEFAULT_BUFFER_SIZE)?: continue
             val chunk = json.decodeFromString<OllamaResponse>(line)
 
-            onToken(chunk.response)
+            if (chunk.response.isNotEmpty()) {
+                onToken(chunk.response)
+            }
 
             if (chunk.done) break
         }
     }
-*/
-
 
     private fun buildPrompt(messages: List<ChatMessage>): String {
         return messages.joinToString("\n") { msg ->

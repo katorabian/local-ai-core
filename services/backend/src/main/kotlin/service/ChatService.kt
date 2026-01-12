@@ -46,4 +46,17 @@ class ChatService(
             createdAt = Instant.now()
         )
     }
+
+    suspend fun streamMessage(
+        session: ChatSession,
+        userMessage: ChatMessage,
+        onToken: suspend (String) -> Unit
+    ) {
+        llmClient.stream(
+            model = session.model,
+            messages = listOf(userMessage),
+            onToken = onToken
+        )
+    }
+
 }
