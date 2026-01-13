@@ -115,19 +115,24 @@ async function sendMessage() {
     await loadMessages(currentSessionId);
   }
 
+  // временный user message (optimistic UI)
+  const tempUserEl = document.createElement("div");
+  tempUserEl.innerHTML = `<b>user</b>: ${text}`;
+  tempUserEl.dataset.temp = "true";
+  tempUserEl.dataset.role = "user";
+  tempUserEl.dataset.content = text;
+  messagesEl.appendChild(tempUserEl);
+
   // 2️⃣ очищаем поле ввода
   inputEl.value = "";
 
-  // 3️⃣ показываем сообщение пользователя
-  messagesEl.innerHTML += `<div><b>user</b>: ${text}</div>`;
-
-  // 4️⃣ подготавливаем место под ответ ассистента
+  // 3️⃣ подготавливаем место под ответ ассистента
   const assistantEl = document.createElement("div");
   assistantEl.innerHTML = `<b>assistant</b>: <i>thinking...</i>`;
   messagesEl.appendChild(assistantEl);
   let firstToken = true;
 
-  // 5️⃣ запускаем SSE
+  // 4️⃣ запускаем SSE
   const eventSource = new EventSource(
     `${API_BASE}/chat/sessions/${currentSessionId}/stream?message=${encodeURIComponent(text)}`
   );
@@ -144,8 +149,25 @@ async function sendMessage() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   });
 
-  eventSource.addEventListener("done", () => {
+  eventSource.addEventListener("done", async () => {
     eventSource.close();
+
+    eventSource.addEventListener("done", async () => {
+      eventSource.close();
+
+      const res = await fetch(
+        `${API_BASE}/chat/sessions/${currentSessionId}/messages`
+      );
+      const messages: ChatMessage[] = await res.json();
+
+      // аккуратный reconciliation
+      messagesEl.innerHTML = messages
+        .map(
+          (m) =>
+            `<div><b>${m.role}</b>: ${m.content}</div>`
+        )
+        .join("");
+    });
   });
 
   eventSource.onerror = () => {
