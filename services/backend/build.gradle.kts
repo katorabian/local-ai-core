@@ -17,6 +17,7 @@ dependencies {
     implementation("io.ktor:ktor-server-netty-jvm:2.3.8")
     implementation("io.ktor:ktor-server-content-negotiation-jvm:2.3.8")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:2.3.8")
+    implementation("io.ktor:ktor-server-cors-jvm:2.3.8")
 
     // Ktor client
     implementation("io.ktor:ktor-client-core-jvm:2.3.8")
