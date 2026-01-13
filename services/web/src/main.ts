@@ -13,16 +13,19 @@ type ChatMessage = {
 
 const API_BASE = "http://localhost:8080/api/v1";
 
+import "./style.css";
+
 const app = document.getElementById("app")!;
 app.innerHTML = `
-  <div style="display: flex; height: 100vh;">
-    <aside id="sessions" style="width: 280px; border-right: 1px solid #444; padding: 8px; overflow-y: auto;"></aside>
+  <div class="layout">
+    <aside id="sessions" class="sidebar"></aside>
 
-    <main style="flex: 1; display: flex; flex-direction: column;">
-      <div id="messages" style="flex: 1; padding: 12px; overflow-y: auto;"></div>
-      <div style="display:flex; padding:8px; border-top:1px solid #444;">
-        <input id="input" style="flex:1; padding:8px;" placeholder="Type message..." />
-        <button id="send" style="margin-left:8px;">Send</button>
+    <main class="chat">
+      <div id="messages" class="messages"></div>
+
+      <div class="input-bar">
+        <input id="input" placeholder="Введите сообщение..." />
+        <button id="send">Send</button>
       </div>
     </main>
   </div>
@@ -89,7 +92,9 @@ async function loadMessages(sessionId: string) {
   messagesEl.innerHTML = messages
     .map(
       (m) =>
-        `<div><b>${m.role}</b>: ${m.content}</div>`
+        `<div class="message ${m.role}">
+          ${m.content}
+        </div>`
     )
     .join("");
 }
@@ -117,7 +122,8 @@ async function sendMessage() {
 
   // временный user message (optimistic UI)
   const tempUserEl = document.createElement("div");
-  tempUserEl.innerHTML = `<b>user</b>: ${text}`;
+  tempUserEl.className = "message user";
+  tempUserEl.textContent = text;
   tempUserEl.dataset.temp = "true";
   tempUserEl.dataset.role = "user";
   tempUserEl.dataset.content = text;
@@ -128,7 +134,8 @@ async function sendMessage() {
 
   // 3️⃣ подготавливаем место под ответ ассистента
   const assistantEl = document.createElement("div");
-  assistantEl.innerHTML = `<b>assistant</b>: <i>thinking...</i>`;
+  assistantEl.className = "message assistant";
+  assistantEl.textContent = "thinking...";
   messagesEl.appendChild(assistantEl);
   let firstToken = true;
 
