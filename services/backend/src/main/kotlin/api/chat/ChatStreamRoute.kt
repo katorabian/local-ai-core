@@ -22,7 +22,7 @@ fun Route.chatStreamRoute(chatService: ChatService) {
         ) {
             chatService.streamMessage(
                 sessionId = sessionId,
-                userContent = message
+                userQuery = message
             ) { token ->
                 val json = Json.encodeToString(mapOf("text" to token))
                 write("event: token\n")

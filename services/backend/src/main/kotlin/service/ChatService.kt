@@ -61,28 +61,42 @@ class ChatService(
 
     suspend fun streamMessage(
         sessionId: UUID,
-        userContent: String,
+        userQuery: String,
         onToken: suspend (String) -> Unit
     ) {
         val session = store.getSession(sessionId)
             ?: error("Session not found")
 
-        val userMessage = ChatMessage(
-            id = UUID.randomUUID(),
-            sessionId = session.id,
-            role = Role.USER,
-            content = userContent,
-            createdAt = Instant.now()
+        // 1. Сохраняем сообщение пользователя
+        store.addMessage(
+            ChatMessage(
+                id = UUID.randomUUID(),
+                sessionId = sessionId,
+                role = Role.USER,
+                content = userQuery,
+                createdAt = Instant.now()
+            )
         )
 
-        store.addMessage(userMessage)
-
-        val history = store.getMessages(session.id)
-
+        // 2. Стримим токены и копим текст
+        val assistantBuffer = StringBuilder()
         llmClient.stream(
             model = session.model,
-            messages = history,
-            onToken = onToken
+            messages = store.getMessages(sessionId)
+        ) { token ->
+            assistantBuffer.append(token)
+            onToken(token)
+        }
+
+        // 3. Сохраняем результрующий ответ ИИ
+        store.addMessage(
+            ChatMessage(
+                id = UUID.randomUUID(),
+                sessionId = sessionId,
+                role = Role.ASSISTANT,
+                content = assistantBuffer.toString(),
+                createdAt = Instant.now()
+            )
         )
     }
 
