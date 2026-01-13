@@ -23,10 +23,19 @@ app.innerHTML = `
     <main class="chat">
       <div id="messages" class="messages"></div>
 
-      <div class="input-bar">
-        <input id="input" placeholder="Введите сообщение..." />
-        <button id="send">Send</button>
+      <div class="input-wrapper">
+        <div class="input-bar">
+          <button class="icon-btn">＋</button>
+
+          <input id="input" placeholder="Введите сообщение..." />
+
+          <div class="right-actions">
+            <button class="icon-btn">🎤</button>
+            <button id="send" class="send-btn">↑</button>
+          </div>
+        </div>
       </div>
+
     </main>
   </div>
 `;

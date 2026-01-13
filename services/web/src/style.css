@@ -127,3 +127,76 @@ button {
 button:hover {
   opacity: 0.95;
 }
+
+/* ===== CHATGPT-STYLE INPUT (ТОЛЬКО ПОЛЕ ВВОДА) ===== */
+
+.input-wrapper {
+  position: sticky;
+  bottom: 20px;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.input-bar {
+  width: 100%;
+  max-width: 900px;
+
+  background: rgba(32, 28, 45, 0.75);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+
+/* Само поле ввода */
+.input-bar input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eaeaea;
+  font-size: 14.5px;
+  flex: 1;
+  padding: 6px 4px;
+}
+
+/* Кнопки + и микрофон */
+.icon-btn {
+  background: transparent;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.icon-btn:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+/* Кнопка отправки (стрелка) */
+.send-btn {
+  background: #7c5cff;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: white;
+}
+
+.send-btn:hover {
+  opacity: 0.9;
+}
+
+/* Убираем любую подсветку при фокусе */
+input:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
