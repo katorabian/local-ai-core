@@ -23,12 +23,17 @@ class CommandExecutor(
                 }.getOrNull()
                     ?: return "Unknown style: $presetName"
 
-                // TODO: на следующем шаге — корректное обновление session state
-                "Style will be changed to ${preset.name.lowercase()} (not yet persisted)"
+                sessionService.updateBehavior(
+                    sessionId = session.id,
+                    preset = preset
+                )
+
+                "Style changed to ${preset.name.lowercase()}"
             }
 
             "/reset-style" -> {
-                "Style reset to neutral (not yet persisted)"
+                sessionService.resetBehavior(session.id)
+                "Style reset to neutral"
             }
 
             else -> "Unknown command: ${command.name}"

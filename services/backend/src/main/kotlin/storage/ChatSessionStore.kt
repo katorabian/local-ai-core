@@ -18,6 +18,13 @@ class ChatSessionStore {
 
     fun getSession(id: UUID): ChatSession? = sessions[id]
 
+    fun updateSession(session: ChatSession) {
+        require(sessions.containsKey(session.id)) {
+            "Session not found"
+        }
+        sessions[session.id] = session
+    }
+
     fun addMessage(message: ChatMessage) {
         require(message.role != Role.SYSTEM) {
             "SYSTEM messages must not be stored in session history"

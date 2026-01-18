@@ -27,4 +27,21 @@ class ChatSessionService(
 
     fun list(): List<ChatSession> =
         store.getAllSessions()
+
+    fun updateBehavior(
+        sessionId: UUID,
+        preset: BehaviorPrompt.Preset
+    ): ChatSession {
+        val current = get(sessionId)
+
+        val updated = current.copy(
+            behaviorPreset = preset
+        )
+
+        store.updateSession(updated)
+        return updated
+    }
+
+    fun resetBehavior(sessionId: UUID): ChatSession =
+        updateBehavior(sessionId, BehaviorPrompt.Preset.NEUTRAL)
 }
