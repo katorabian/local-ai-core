@@ -9,33 +9,49 @@ class ChatService(
     private val sessionService: ChatSessionService,
     private val messageService: ChatMessageService,
     private val promptService: PromptService,
-    private val llmClient: LlmClient
+    private val llmClient: LlmClient,
+    private val inputProcessor: UserInputProcessor
 ) {
 
-    fun createSession(model: String): ChatSession = sessionService.create(model)
+    fun createSession(model: String): ChatSession =
+        sessionService.create(model)
 
     suspend fun sendMessage(
         sessionId: UUID,
-        userQuery: String
+        rawInput: String
     ): ChatMessage {
 
         val session = sessionService.get(sessionId)
 
-        messageService.addUserMessage(
-            sessionId = session.id,
-            content = userQuery
-        )
+        return when (val result = inputProcessor.process(session, rawInput)) {
 
-        val prompt = promptService.buildPromptForSession(session)
-        val response = llmClient.generate(
-            model = session.model,
-            messages = prompt
-        )
+            is UserInputResult.CommandHandled -> {
+                messageService.addAssistantMessage(
+                    sessionId = session.id,
+                    content = result.systemResponse
+                )
+            }
 
-        return messageService.addAssistantMessage(
-            sessionId = session.id,
-            content = response
-        )
+            is UserInputResult.ForwardToLlm -> {
+
+                messageService.addUserMessage(
+                    sessionId = session.id,
+                    content = result.userMessage
+                )
+
+                val prompt = promptService.buildPromptForSession(session)
+
+                val response = llmClient.generate(
+                    model = session.model,
+                    messages = prompt
+                )
+
+                messageService.addAssistantMessage(
+                    sessionId = session.id,
+                    content = response
+                )
+            }
+        }
     }
 
     suspend fun streamMessage(
@@ -45,26 +61,36 @@ class ChatService(
     ) {
         val session = sessionService.get(sessionId)
 
-        messageService.addUserMessage(
-            sessionId = session.id,
-            content = userQuery
-        )
+        when (val result = inputProcessor.process(session, userQuery)) {
 
-        val prompt = promptService.buildPromptForSession(session)
-        val buffer = StringBuilder()
+            is UserInputResult.CommandHandled -> {
+                onToken(result.systemResponse)
+            }
 
-        llmClient.stream(
-            model = session.model,
-            messages = prompt
-        ) { token ->
-            buffer.append(token)
-            onToken(token)
+            is UserInputResult.ForwardToLlm -> {
+
+                messageService.addUserMessage(
+                    sessionId = session.id,
+                    content = result.userMessage
+                )
+
+                val prompt = promptService.buildPromptForSession(session)
+                val buffer = StringBuilder()
+
+                llmClient.stream(
+                    model = session.model,
+                    messages = prompt
+                ) { token ->
+                    buffer.append(token)
+                    onToken(token)
+                }
+
+                messageService.addAssistantMessage(
+                    sessionId = session.id,
+                    content = buffer.toString()
+                )
+            }
         }
-
-        messageService.addAssistantMessage(
-            sessionId = session.id,
-            content = buffer.toString()
-        )
     }
 
     fun getAllSessions(): List<ChatSession> =

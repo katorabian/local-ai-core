@@ -8,7 +8,10 @@ import com.katorabian.prompt.PromptConfigFactory
 import com.katorabian.service.chat.ChatMessageService
 import com.katorabian.service.chat.ChatService
 import com.katorabian.service.chat.ChatSessionService
+import com.katorabian.service.chat.CommandExecutor
+import com.katorabian.service.chat.CommandParser
 import com.katorabian.service.chat.PromptService
+import com.katorabian.service.chat.UserInputProcessor
 import com.katorabian.storage.ChatSessionStore
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -33,11 +36,19 @@ fun main() {
     val promptAssembler = PromptAssembler(PromptConfigFactory())
     val promptService = PromptService(store, promptAssembler)
 
+    val commandParser = CommandParser()
+    val commandExecutor = CommandExecutor(sessionService)
+    val inputProcessor = UserInputProcessor(
+        commandParser,
+        commandExecutor
+    )
+
     val chatService = ChatService(
         sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,
-        llmClient = llmClient
+        llmClient = llmClient,
+        inputProcessor = inputProcessor
     )
 
 
