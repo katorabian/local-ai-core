@@ -1,8 +1,10 @@
-package com.katorabian.service.chat
-
 sealed interface UserInputResult {
 
     data class CommandHandled(
+        val systemResponse: String
+    ) : UserInputResult
+
+    data class IntentHandled(
         val systemResponse: String
     ) : UserInputResult
 

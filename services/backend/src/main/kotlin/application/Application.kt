@@ -11,6 +11,7 @@ import com.katorabian.service.chat.ChatSessionService
 import com.katorabian.service.chat.CommandExecutor
 import com.katorabian.service.chat.CommandParser
 import com.katorabian.service.chat.PromptService
+import com.katorabian.service.chat.ProseIntentDetector
 import com.katorabian.service.chat.UserInputProcessor
 import com.katorabian.storage.ChatSessionStore
 import io.ktor.http.HttpHeaders
@@ -38,9 +39,13 @@ fun main() {
 
     val commandParser = CommandParser()
     val commandExecutor = CommandExecutor(sessionService)
+    val intentDetector = ProseIntentDetector()
+
     val inputProcessor = UserInputProcessor(
-        commandParser,
-        commandExecutor
+        commandParser = commandParser,
+        commandExecutor = commandExecutor,
+        intentDetector = intentDetector,
+        sessionService = sessionService
     )
 
     val chatService = ChatService(

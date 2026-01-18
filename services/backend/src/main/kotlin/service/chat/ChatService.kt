@@ -23,9 +23,17 @@ class ChatService(
 
         val session = sessionService.get(sessionId)
 
-        return when (val result = inputProcessor.process(session, rawInput)) {
+        val result = inputProcessor.process(session, rawInput)
+        return when (result) {
 
             is UserInputResult.CommandHandled -> {
+                messageService.addAssistantMessage(
+                    sessionId = session.id,
+                    content = result.systemResponse
+                )
+            }
+
+            is UserInputResult.IntentHandled -> {
                 messageService.addAssistantMessage(
                     sessionId = session.id,
                     content = result.systemResponse
@@ -61,9 +69,13 @@ class ChatService(
     ) {
         val session = sessionService.get(sessionId)
 
-        when (val result = inputProcessor.process(session, userQuery)) {
-
+        val result = inputProcessor.process(session, userQuery)
+        when (result) {
             is UserInputResult.CommandHandled -> {
+                onToken(result.systemResponse)
+            }
+
+            is UserInputResult.IntentHandled -> {
                 onToken(result.systemResponse)
             }
 
