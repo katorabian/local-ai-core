@@ -1,6 +1,6 @@
 package com.katorabian.service.chat
 
-import UserInputResult
+import service.chat.UserInputResult
 import com.katorabian.domain.ChatSession
 
 class UserInputProcessor(

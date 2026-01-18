@@ -23,32 +23,17 @@ class ChatService(
 
         val session = sessionService.get(sessionId)
 
-        val result = inputProcessor.process(session, rawInput)
-        return when (result) {
-
-            is UserInputResult.CommandHandled -> {
-                messageService.addAssistantMessage(
-                    sessionId = session.id,
-                    content = result.systemResponse
-                )
-            }
-
-            is UserInputResult.IntentHandled -> {
-                messageService.addAssistantMessage(
-                    sessionId = session.id,
-                    content = result.systemResponse
-                )
-            }
-
-            is UserInputResult.ForwardToLlm -> {
-
-                messageService.addUserMessage(
-                    sessionId = session.id,
-                    content = result.userMessage
-                )
+        return inputProcessor.process(
+            session = session,
+            input = rawInput
+        ).fold(
+            onSystemResponse = { userMessage ->
+                messageService.addAssistantMessage(session.id, userMessage)
+            },
+            onForwardToLlm = { userMessage ->
+                messageService.addUserMessage(session.id, userMessage)
 
                 val prompt = promptService.buildPromptForSession(session)
-
                 val response = llmClient.generate(
                     model = session.model,
                     messages = prompt
@@ -59,7 +44,7 @@ class ChatService(
                     content = response
                 )
             }
-        }
+        )
     }
 
     suspend fun streamMessage(
@@ -69,25 +54,16 @@ class ChatService(
     ) {
         val session = sessionService.get(sessionId)
 
-        val result = inputProcessor.process(session, userQuery)
-        when (result) {
-            is UserInputResult.CommandHandled -> {
-                onToken(result.systemResponse)
-            }
+        inputProcessor.process(
+            session = session,
+            input = userQuery
+        ).fold(
+            onSystemResponse = onToken,
+            onForwardToLlm  = { userMessage ->
+                messageService.addUserMessage(session.id, userMessage)
 
-            is UserInputResult.IntentHandled -> {
-                onToken(result.systemResponse)
-            }
-
-            is UserInputResult.ForwardToLlm -> {
-
-                messageService.addUserMessage(
-                    sessionId = session.id,
-                    content = result.userMessage
-                )
-
-                val prompt = promptService.buildPromptForSession(session)
                 val buffer = StringBuilder()
+                val prompt = promptService.buildPromptForSession(session)
 
                 llmClient.stream(
                     model = session.model,
@@ -102,7 +78,7 @@ class ChatService(
                     content = buffer.toString()
                 )
             }
-        }
+        )
     }
 
     fun getAllSessions(): List<ChatSession> =
