@@ -1,4 +1,4 @@
-package com.katorabian.service.chat
+package com.katorabian.service.message
 
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.enum.Role

@@ -1,7 +1,8 @@
-package com.katorabian.service.chat
+package com.katorabian.service.input
 
-import service.chat.UserInputResult
+import com.katorabian.service.chat.UserInputResult
 import com.katorabian.domain.ChatSession
+import com.katorabian.service.session.ChatSessionService
 
 class UserInputProcessor(
     private val commandParser: CommandParser,

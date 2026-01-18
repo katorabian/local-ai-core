@@ -1,7 +1,8 @@
-package com.katorabian.service.chat
+package com.katorabian.service.input
 
 import com.katorabian.domain.ChatSession
 import com.katorabian.prompt.BehaviorPrompt
+import com.katorabian.service.session.ChatSessionService
 
 class CommandExecutor(
     private val sessionService: ChatSessionService

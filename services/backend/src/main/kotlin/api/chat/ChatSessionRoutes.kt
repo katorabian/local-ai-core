@@ -1,6 +1,7 @@
 package com.katorabian.api.chat
 
 import com.katorabian.service.chat.ChatService
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -43,7 +44,7 @@ fun Route.chatSessionRoutes(chatService: ChatService) {
         val session = chatService.getSession(sessionId)
             ?: return@get call.respondText(
                 "Session not found",
-                status = io.ktor.http.HttpStatusCode.NotFound
+                status = HttpStatusCode.NotFound
             )
 
         call.respond(

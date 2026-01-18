@@ -1,4 +1,4 @@
-package com.katorabian.service.chat
+package com.katorabian.service.session
 
 import com.katorabian.domain.ChatSession
 import com.katorabian.prompt.BehaviorPrompt

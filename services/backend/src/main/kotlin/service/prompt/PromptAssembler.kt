@@ -1,8 +1,9 @@
-package com.katorabian.prompt
+package com.katorabian.service.prompt
 
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.enum.Role
+import com.katorabian.prompt.PromptConfigFactory
 import java.time.Instant
 import java.util.UUID
 

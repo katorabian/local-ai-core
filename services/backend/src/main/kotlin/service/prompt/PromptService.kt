@@ -1,8 +1,7 @@
-package com.katorabian.service.chat
+package com.katorabian.service.prompt
 
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
-import com.katorabian.prompt.PromptAssembler
 import com.katorabian.storage.ChatSessionStore
 
 class PromptService(
