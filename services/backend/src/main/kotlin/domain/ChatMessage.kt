@@ -10,4 +10,15 @@ data class ChatMessage(
     val role: Role,
     val content: String,
     val createdAt: Instant
-)
+) {
+
+    companion object {
+        fun system(content: String) = ChatMessage(
+            id = UUID.randomUUID(),
+            sessionId = UUID(0, 0),
+            role = Role.SYSTEM,
+            content = content,
+            createdAt = Instant.EPOCH
+        )
+    }
+}

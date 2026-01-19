@@ -3,17 +3,19 @@ package com.katorabian.service.chat
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.llm.LlmClient
-import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
+import com.katorabian.service.model.ModelService
+import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.session.ChatSessionService
-import java.util.UUID
+import java.util.*
 
 class ChatService(
     private val sessionService: ChatSessionService,
     private val messageService: ChatMessageService,
     private val promptService: PromptService,
     private val llmClient: LlmClient,
+    private val modelService: ModelService,
     private val inputProcessor: UserInputProcessor
 ) {
 
@@ -38,10 +40,12 @@ class ChatService(
                 messageService.addUserMessage(session.id, userMessage)
 
                 val prompt = promptService.buildPromptForSession(session)
-                val response = llmClient.generate(
-                    model = session.model,
-                    messages = prompt
-                )
+                val response = modelService.withInference(session.model) {
+                    llmClient.generate(
+                        model = session.model,
+                        messages = prompt
+                    )
+                }
 
                 messageService.addAssistantMessage(
                     sessionId = session.id,
@@ -69,12 +73,14 @@ class ChatService(
                 val buffer = StringBuilder()
                 val prompt = promptService.buildPromptForSession(session)
 
-                llmClient.stream(
-                    model = session.model,
-                    messages = prompt
-                ) { token ->
-                    buffer.append(token)
-                    onToken(token)
+                modelService.withInference(session.model) {
+                    llmClient.stream(
+                        model = session.model,
+                        messages = prompt
+                    ) { token ->
+                        buffer.append(token)
+                        onToken(token)
+                    }
                 }
 
                 messageService.addAssistantMessage(

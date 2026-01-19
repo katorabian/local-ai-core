@@ -2,6 +2,7 @@ package com.katorabian.application
 
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
+import com.katorabian.api.model.modelRoutes
 import com.katorabian.llm.ollama.OllamaClient
 import com.katorabian.service.prompt.PromptAssembler
 import com.katorabian.prompt.PromptConfigFactory
@@ -13,6 +14,7 @@ import com.katorabian.service.input.CommandParser
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.input.ProseIntentDetector
 import com.katorabian.service.input.UserInputProcessor
+import com.katorabian.service.model.ModelService
 import com.katorabian.storage.ChatSessionStore
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -30,6 +32,8 @@ import kotlinx.serialization.Serializable
 fun main() {
     val llmClient = OllamaClient()
     val store = ChatSessionStore()
+
+    val modelService = ModelService(llmClient)
 
     val sessionService = ChatSessionService(store)
     val messageService = ChatMessageService(store)
@@ -52,6 +56,7 @@ fun main() {
         sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,
+        modelService = modelService,
         llmClient = llmClient,
         inputProcessor = inputProcessor
     )
@@ -90,6 +95,8 @@ fun main() {
 
             chatSessionRoutes(chatService)
             chatStreamRoute(chatService)
+
+            modelRoutes(modelService)
         }
     }.start(wait = true)
 }
