@@ -154,40 +154,38 @@ async function sendMessage() {
   );
 
   // ✅ ВАЖНО: бек всегда шлёт event: message
-  eventSource.addEventListener("message", (e) => {
-    const data = JSON.parse((e as MessageEvent).data);
+    eventSource.addEventListener("message", (e) => {
+      const data = JSON.parse((e as MessageEvent).data);
 
-    // Thinking
-    if (data.message === "thinking") {
-      assistantEl.textContent = "thinking...";
-      return;
-    }
-
-    // Token stream
-    if (data.text) {
-      if (firstToken) {
-        assistantEl.innerHTML = `<b>assistant</b>: `;
-        firstToken = false;
+      // Thinking
+      if (data.message === "thinking") {
+        assistantEl.textContent = "thinking...";
+        return;
       }
 
-      assistantEl.innerHTML += data.text;
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      return;
-    }
+      // Token stream
+      if (data.text) {
+        if (firstToken) {
+          assistantEl.innerHTML = `<b>assistant</b>: `;
+          firstToken = false;
+        }
 
-    // Completed
-    if (data.fullText) {
-      assistantEl.innerHTML = `<b>assistant</b>: ${data.fullText}`;
-      eventSource.close();
-      return;
-    }
+        assistantEl.innerHTML += data.text;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return;
+      }
 
-    // Error
-    if (data.message) {
-      assistantEl.textContent = `Ошибка: ${data.message}`;
+      // Error
+      if (data.message) {
+        assistantEl.textContent = `Ошибка: ${data.message}`;
+        eventSource.close();
+      }
+    });
+
+    // Завершение стрима
+    eventSource.addEventListener("done", () => {
       eventSource.close();
-    }
-  });
+    });
 
   eventSource.onerror = () => {
     eventSource.close();
