@@ -3,9 +3,9 @@ package com.katorabian.service.chat
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.chat.ChatEvent
-import com.katorabian.llm.LlmClient
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
+import com.katorabian.service.model.ModelRouter
 import com.katorabian.service.model.ModelService
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.session.ChatSessionService
@@ -15,7 +15,7 @@ class ChatService(
     private val sessionService: ChatSessionService,
     private val messageService: ChatMessageService,
     private val promptService: PromptService,
-    private val llmClient: LlmClient,
+    private val modelRouter: ModelRouter,
     private val modelService: ModelService,
     private val inputProcessor: UserInputProcessor
 ) {
@@ -41,9 +41,10 @@ class ChatService(
                 messageService.addUserMessage(session.id, userMessage)
 
                 val prompt = promptService.buildPromptForSession(session)
+                val model = modelRouter.resolve(session.model)
                 val response = modelService.withInference(session.model) {
-                    llmClient.generate(
-                        model = session.model,
+                    model.client.generate(
+                        model = model.id,
                         messages = prompt
                     )
                 }
@@ -81,8 +82,9 @@ class ChatService(
 
                 runCatching {
                     modelService.withInference(session.model) {
-                        llmClient.stream(
-                            model = session.model,
+                        val model = modelRouter.resolve(session.model)
+                        model.client.stream(
+                            model = model.id,
                             messages = prompt
                         ) { token ->
                             buffer.append(token)

@@ -14,6 +14,8 @@ import com.katorabian.service.input.CommandParser
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.input.ProseIntentDetector
 import com.katorabian.service.input.UserInputProcessor
+import com.katorabian.service.model.ModelDescriptor
+import com.katorabian.service.model.ModelRouter
 import com.katorabian.service.model.ModelService
 import com.katorabian.storage.ChatSessionStore
 import io.ktor.http.HttpHeaders
@@ -30,10 +32,19 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
 fun main() {
-    val llmClient = OllamaClient()
+    val ollamaClient = OllamaClient()
     val store = ChatSessionStore()
+    val modelRouter = ModelRouter(
+        models = mapOf(
+            // id модели = то, что сейчас хранится в ChatSession.model
+            "llama3.2:3b" to ModelDescriptor(
+                id = "llama3.2:3b",
+                client = ollamaClient,
+            )
+        )
+    )
 
-    val modelService = ModelService(llmClient)
+    val modelService = ModelService(ollamaClient)
 
     val sessionService = ChatSessionService(store)
     val messageService = ChatMessageService(store)
@@ -56,11 +67,10 @@ fun main() {
         sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,
+        modelRouter = modelRouter,
         modelService = modelService,
-        llmClient = llmClient,
         inputProcessor = inputProcessor
     )
-
 
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
