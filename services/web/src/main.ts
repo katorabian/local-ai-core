@@ -85,7 +85,7 @@ async function createSession() {
   const res = await fetch(`${API_BASE}/chat/sessions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "llama3.2:3b" }),
+    body: "",
   });
 
   const data = await res.json();
@@ -119,7 +119,7 @@ async function sendMessage() {
     const res = await fetch(`${API_BASE}/chat/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "llama3.2:3b" }),
+      body: "",
     });
 
     const data = await res.json();
