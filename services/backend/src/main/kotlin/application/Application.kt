@@ -33,19 +33,21 @@ import kotlinx.serialization.Serializable
 
 fun main() {
     val ollamaClient = OllamaClient()
-    val store = ChatSessionStore()
     val modelRouter = ModelRouter(
         models = mapOf(
-            // id модели = то, что сейчас хранится в ChatSession.model
             "llama3.2:3b" to ModelDescriptor(
                 id = "llama3.2:3b",
-                client = ollamaClient,
+                client = ollamaClient
             )
+            // позже добавим вторую модель сюда же
+        ),
+        fallbackOrder = listOf(
+            "llama3.2:3b"
         )
     )
-
     val modelService = ModelService()
 
+    val store = ChatSessionStore()
     val sessionService = ChatSessionService(store)
     val messageService = ChatMessageService(store)
 
