@@ -42,7 +42,7 @@ class ChatService(
 
                 val prompt = promptService.buildPromptForSession(session)
                 val model = modelRouter.resolve(session.model)
-                val response = modelService.withInference(session.model) {
+                val response = modelService.withInference(model) {
                     model.client.generate(
                         model = model.id,
                         messages = prompt
@@ -81,8 +81,8 @@ class ChatService(
                 val prompt = promptService.buildPromptForSession(session)
 
                 runCatching {
-                    modelService.withInference(session.model) {
-                        val model = modelRouter.resolve(session.model)
+                    val model = modelRouter.resolve(session.model)
+                    modelService.withInference(model) {
                         model.client.stream(
                             model = model.id,
                             messages = prompt

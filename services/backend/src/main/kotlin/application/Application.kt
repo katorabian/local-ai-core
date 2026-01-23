@@ -44,7 +44,7 @@ fun main() {
         )
     )
 
-    val modelService = ModelService(ollamaClient)
+    val modelService = ModelService()
 
     val sessionService = ChatSessionService(store)
     val messageService = ChatMessageService(store)

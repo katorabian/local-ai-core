@@ -1,21 +1,19 @@
 package com.katorabian.service.model
 
 import com.katorabian.domain.ChatMessage
-import com.katorabian.llm.LlmClient
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
-class ModelService(
-    private val llmClient: LlmClient
-) {
+class ModelService {
 
-    private val states = ConcurrentHashMap<String, AtomicReference<ModelRuntimeState>>()
+    private val states =
+        ConcurrentHashMap<String, AtomicReference<ModelRuntimeState>>()
 
-    fun getState(model: String): ModelRuntimeState =
-        states[model]?.get() ?: ModelRuntimeState.COLD
+    fun getState(modelId: String): ModelRuntimeState =
+        states[modelId]?.get() ?: ModelRuntimeState.COLD
 
-    suspend fun warmUp(model: String) {
-        val state = states.getOrPut(model) {
+    suspend fun warmUp(model: ModelDescriptor) {
+        val state = states.getOrPut(model.id) {
             AtomicReference(ModelRuntimeState.COLD)
         }
 
@@ -26,8 +24,8 @@ class ModelService(
         if (!wasCold) return
 
         try {
-            llmClient.generate(
-                model = model,
+            model.client.generate(
+                model = model.id,
                 messages = listOf(
                     ChatMessage.system("Warm-up")
                 )
@@ -40,10 +38,10 @@ class ModelService(
     }
 
     suspend fun <T> withInference(
-        model: String,
+        model: ModelDescriptor,
         block: suspend () -> T
     ): T {
-        val state = states.getOrPut(model) {
+        val state = states.getOrPut(model.id) {
             AtomicReference(ModelRuntimeState.COLD)
         }
 
