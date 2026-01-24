@@ -4,24 +4,34 @@ import com.katorabian.domain.ChatMessage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
-class ModelService {
-
-    private val states =
-        ConcurrentHashMap<String, AtomicReference<ModelRuntimeState>>()
+class ModelService(
+    models: List<ModelDescriptor> = emptyList()
+) {
+    private val states = ConcurrentHashMap<String, AtomicReference<ModelRuntimeState>>()
+    init {
+        models.forEach { model ->
+            states.putIfAbsent(
+                model.id,
+                AtomicReference(ModelRuntimeState.COLD)
+            )
+        }
+    }
 
     fun getState(modelId: String): ModelRuntimeState =
         states[modelId]?.get() ?: ModelRuntimeState.COLD
 
     fun mark(modelId: String, state: ModelRuntimeState) {
-        states.getOrPut(modelId) { AtomicReference(ModelRuntimeState.COLD) }
-            .set(state)
+        val ref = states[modelId] ?: error("Model state not initialized: $modelId")
+        ref.set(state)
     }
 
-    suspend fun warmUp(model: ModelDescriptor) {
-        val state = states.getOrPut(model.id) {
+    private fun stateRef(modelId: String): AtomicReference<ModelRuntimeState> =
+        states.getOrPut(modelId) {
             AtomicReference(ModelRuntimeState.COLD)
         }
 
+    suspend fun warmUp(model: ModelDescriptor) {
+        val state = stateRef(model.id)
         val wasCold = state.compareAndSet(
             ModelRuntimeState.COLD,
             ModelRuntimeState.WARMING_UP
@@ -47,10 +57,7 @@ class ModelService {
         model: ModelDescriptor,
         block: suspend () -> T
     ): T {
-        val state = states.getOrPut(model.id) {
-            AtomicReference(ModelRuntimeState.COLD)
-        }
-
+        val state = stateRef(model.id)
         if (state.get() == ModelRuntimeState.COLD) {
             warmUp(model)
         }

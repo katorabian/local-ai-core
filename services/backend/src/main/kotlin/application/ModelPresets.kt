@@ -9,7 +9,7 @@ object ModelPresets {
     fun smartChat(llamaClient: LlamaCppClient) =
         ModelDescriptor(
             id = "qwen2.5-14b",
-            role = ModelRole.SMART_CHAT,
+            role = ModelRole.CHAT,
             client = llamaClient,
             isLocal = true
         )

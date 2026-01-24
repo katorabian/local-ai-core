@@ -6,8 +6,8 @@ object InputClassifier {
         when {
             looksLikeCommand(input) -> ModelRole.SYSTEM
             looksLikeCode(input) -> ModelRole.SMART_REASONING
-            input.length < 120 -> ModelRole.FAST_CHAT
-            else -> ModelRole.SMART_REASONING
+            input.length < 120 -> ModelRole.CHAT
+            else -> ModelRole.CHAT
         }
 
     private fun looksLikeCommand(input: String): Boolean =

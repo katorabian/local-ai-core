@@ -9,8 +9,13 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 
 class LlamaCppClient(
+    private val serverProcess: LlamaServerProcess,
     private val baseUrl: String = "http://localhost:8081"
 ) : LlmClient {
+
+    init {
+        serverProcess.start()
+    }
 
     private val client = HttpClient(CIO)
 
