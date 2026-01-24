@@ -24,14 +24,14 @@ class ChatService(
 
     suspend fun sendMessage(
         sessionId: UUID,
-        rawInput: String
+        userQuery: String
     ): ChatMessage {
 
         val session = sessionService.get(sessionId)
 
         return inputProcessor.process(
             session = session,
-            input = rawInput
+            input = userQuery
         ).fold(
             onSystemResponse = { userMessage ->
                 messageService.addAssistantMessage(session.id, userMessage)
@@ -41,9 +41,10 @@ class ChatService(
 
                 val prompt = promptService.buildPromptForSession(session)
                 val model = modelRouter.resolve(
-                    primaryModelId = null,
+                    input = userQuery,
                     modelService = modelService
-                )
+                ).also { println("Using model: ${it.id} (${it.role})") }
+
                 val response = modelService.withInference(model) {
                     model.client.generate(
                         model = model.id,
@@ -84,9 +85,9 @@ class ChatService(
 
                 runCatching {
                     val model = modelRouter.resolve(
-                        primaryModelId = null,
+                        input = userQuery,
                         modelService = modelService
-                    )
+                    ).also { println("Using model: ${it.id} (${it.role})") }
                     modelService.withInference(model) {
                         model.client.stream(
                             model = model.id,

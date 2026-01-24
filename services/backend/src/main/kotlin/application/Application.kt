@@ -15,6 +15,7 @@ import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.input.ProseIntentDetector
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.model.ModelDescriptor
+import com.katorabian.service.model.ModelRole
 import com.katorabian.service.model.ModelRouter
 import com.katorabian.service.model.ModelService
 import com.katorabian.storage.ChatSessionStore
@@ -33,18 +34,28 @@ import kotlinx.serialization.Serializable
 
 fun main() {
     val ollamaClient = OllamaClient()
-    val modelRouter = ModelRouter(
-        models = mapOf(
-            "llama3.2:3b" to ModelDescriptor(
-                id = "llama3.2:3b",
-                client = ollamaClient
-            )
-            // позже добавим вторую модель сюда же
+    val models = listOf(
+        ModelDescriptor(
+            id = "llama3.2:3b",
+            role = ModelRole.FAST_CHAT,
+            client = ollamaClient
         ),
+        ModelDescriptor(
+            id = "llama3.1:8b",
+            role = ModelRole.SMART_REASONING,
+            client = ollamaClient
+        )
+        // позже можно добавить SYSTEM-модель
+    )
+
+    val modelRouter = ModelRouter(
+        models = models,
         fallbackOrder = listOf(
-            "llama3.2:3b"
+            ModelRole.SMART_REASONING,
+            ModelRole.FAST_CHAT
         )
     )
+
     val modelService = ModelService()
 
     val store = ChatSessionStore()
