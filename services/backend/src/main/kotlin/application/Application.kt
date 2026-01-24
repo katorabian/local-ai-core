@@ -30,6 +30,9 @@ import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 fun main() {
@@ -85,6 +88,8 @@ fun main() {
         inputProcessor = inputProcessor
     )
 
+
+    warmUpAllModels(modelRouter, modelService)
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
             json()
@@ -109,4 +114,24 @@ fun main() {
             modelRoutes(modelService)
         }
     }.start(wait = true)
+
+}
+
+fun warmUpAllModels(
+    modelRouter: ModelRouter,
+    modelService: ModelService
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        modelRouter.allModels().forEach { model ->
+            launch {
+                try {
+                    println("Warming up model: ${model.id}")
+                    modelService.warmUp(model)
+                    println("Model ready: ${model.id}")
+                } catch (e: Exception) {
+                    println("Warm-up failed for ${model.id}: ${e.message}")
+                }
+            }
+        }
+    }
 }

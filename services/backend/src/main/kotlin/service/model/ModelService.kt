@@ -12,6 +12,11 @@ class ModelService {
     fun getState(modelId: String): ModelRuntimeState =
         states[modelId]?.get() ?: ModelRuntimeState.COLD
 
+    fun mark(modelId: String, state: ModelRuntimeState) {
+        states.getOrPut(modelId) { AtomicReference(ModelRuntimeState.COLD) }
+            .set(state)
+    }
+
     suspend fun warmUp(model: ModelDescriptor) {
         val state = states.getOrPut(model.id) {
             AtomicReference(ModelRuntimeState.COLD)
@@ -24,6 +29,7 @@ class ModelService {
         if (!wasCold) return
 
         try {
+            // минимальный запрос для прогрева
             model.client.generate(
                 model = model.id,
                 messages = listOf(

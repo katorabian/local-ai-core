@@ -8,6 +8,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -24,8 +25,8 @@ class OllamaClient(
         }
 
         install(HttpTimeout) {
-            requestTimeoutMillis = 30_000L
-            connectTimeoutMillis = 5_000L
+            connectTimeoutMillis = CONNECT_TIMEOUT_MS
+            // requestTimeoutMillis задаём динамически в запросах
             socketTimeoutMillis = HttpTimeout.INFINITE_TIMEOUT_MS
         }
     }
@@ -38,6 +39,9 @@ class OllamaClient(
 
         val response = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
+            timeout {
+                requestTimeoutMillis = REQUEST_TIMEOUT_WARMUP_MS
+            }
             setBody(
                 OllamaRequest(
                     model = model,
@@ -59,6 +63,9 @@ class OllamaClient(
 
         val channel = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
+            timeout {
+                requestTimeoutMillis = REQUEST_TIMEOUT_WARMUP_MS
+            }
             setBody(
                 OllamaRequest(
                     model = model,
@@ -90,5 +97,11 @@ class OllamaClient(
                 Role.ASSISTANT -> "Assistant: ${msg.content}"
             }
         }
+    }
+
+    companion object {
+        private const val CONNECT_TIMEOUT_MS = 5_000L
+        private const val REQUEST_TIMEOUT_READY_MS = 30_000L
+        private const val REQUEST_TIMEOUT_WARMUP_MS = 120_000L
     }
 }
