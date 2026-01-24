@@ -4,8 +4,8 @@ object InputClassifier {
 
     fun classify(input: String): ModelRole =
         when {
-            looksLikeCommand(input) -> ModelRole.SYSTEM
-            looksLikeCode(input) -> ModelRole.SMART_REASONING
+            looksLikeCommand(input) -> ModelRole.CHAT //ModelRole.SYSTEM
+            looksLikeCode(input) -> ModelRole.CHAT //ModelRole.SMART_REASONING
             input.length < 120 -> ModelRole.CHAT
             else -> ModelRole.CHAT
         }

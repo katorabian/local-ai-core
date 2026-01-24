@@ -1,6 +1,7 @@
 package com.katorabian.llm.ollama
 
 import com.katorabian.domain.ChatMessage
+import com.katorabian.domain.Constants.CONNECT_TIMEOUT_MS
 import com.katorabian.domain.Constants.LLM_READ_BUFFER
 import com.katorabian.domain.Constants.NOT_FOUND
 import com.katorabian.domain.Constants.ZERO
@@ -120,7 +121,6 @@ class OllamaClient(
     }
 
     companion object {
-        private const val CONNECT_TIMEOUT_MS = 5_000L
         private const val REQUEST_TIMEOUT_READY_MS = 30_000L
         private const val REQUEST_TIMEOUT_WARMUP_MS = 120_000L
     }
