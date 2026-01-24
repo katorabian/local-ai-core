@@ -3,6 +3,7 @@ package com.katorabian.application
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.api.model.modelRoutes
+import com.katorabian.llm.llamacpp.LlamaCppClient
 import com.katorabian.llm.ollama.OllamaClient
 import com.katorabian.service.prompt.PromptAssembler
 import com.katorabian.prompt.PromptConfigFactory
@@ -36,30 +37,18 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 fun main() {
-    val ollamaClient = OllamaClient()
     val models = listOf(
-        ModelDescriptor(
-            id = "llama3.2:3b",
-            role = ModelRole.FAST_CHAT,
-            client = ollamaClient
-        ),
-        ModelDescriptor(
-            id = "llama3.1:8b",
-            role = ModelRole.SMART_REASONING,
-            client = ollamaClient
-        )
-        // позже можно добавить SYSTEM-модель
+        ModelPresets.smartChat(LlamaCppClient())
     )
 
+    val modelService = ModelService(models)
     val modelRouter = ModelRouter(
         models = models,
         fallbackOrder = listOf(
-            ModelRole.SMART_REASONING,
             ModelRole.FAST_CHAT
         )
     )
 
-    val modelService = ModelService()
 
     val store = ChatSessionStore()
     val sessionService = ChatSessionService(store)

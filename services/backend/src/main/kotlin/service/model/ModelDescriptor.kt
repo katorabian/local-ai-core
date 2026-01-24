@@ -5,5 +5,6 @@ import com.katorabian.llm.LlmClient
 data class ModelDescriptor(
     val id: String,
     val role: ModelRole,
-    val client: LlmClient
+    val client: LlmClient,
+    val isLocal: Boolean
 )
