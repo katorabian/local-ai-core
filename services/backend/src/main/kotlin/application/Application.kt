@@ -80,7 +80,6 @@ fun main() {
     )
 
 
-//    warmUpAllModels(modelRouter, modelService)
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
             json()
@@ -106,24 +105,4 @@ fun main() {
         }
     }.start(wait = true)
 
-}
-
-//TODO
-fun warmUpAllModels(
-    modelRouter: ModelRouter,
-    modelService: ModelService
-) {
-    CoroutineScope(Dispatchers.IO).launch {
-        modelRouter.allModels().forEach { model ->
-            launch {
-                try {
-                    println("Warming up model: ${model.id}")
-                    modelService.warmUp(model)
-                    println("Model ready: ${model.id}")
-                } catch (e: Exception) {
-                    println("Warm-up failed for ${model.id}: ${e.message}")
-                }
-            }
-        }
-    }
 }

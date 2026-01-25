@@ -13,6 +13,8 @@ class LlamaServerProcess(
     private val port: Int = 8081,
     private val ctxSize: Int = 8192,
 ) {
+    @Volatile
+    private var starting = false
 
     private var process: Process? = null
 
@@ -69,9 +71,14 @@ class LlamaServerProcess(
     fun isAlive(): Boolean = process?.isAlive == true
 
     fun ensureAlive() {
-        if (process?.isAlive != true) {
-            println("llama-server is not alive, restarting")
+        if (process?.isAlive == true || starting) return
+
+        synchronized(this) {
+            if (process?.isAlive == true || starting) return
+            starting = true
+            println("llama-server is not alive, starting")
             start()
+            starting = false
         }
     }
 
@@ -82,12 +89,14 @@ class LlamaServerProcess(
         val client = HttpClient(CIO)
         val start = System.currentTimeMillis()
 
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            try {
-                client.get("http://127.0.0.1:$port/health")
-                return // сервер готов
-            } catch (_: Exception) {
-                delay(pollDelayMs)
+        client.use { client ->
+            while (System.currentTimeMillis() - start < timeoutMs) {
+                try {
+                    client.get("http://127.0.0.1:$port")
+                    return // сервер готов
+                } catch (_: Exception) {
+                    delay(pollDelayMs)
+                }
             }
         }
 

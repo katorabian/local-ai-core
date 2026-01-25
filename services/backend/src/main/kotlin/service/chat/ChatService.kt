@@ -100,8 +100,8 @@ class ChatService(
                                 emit(ChatEvent.Token(safePart))
                             }
                         }
-                        emit(ChatEvent.Completed)
                     }
+                    emit(ChatEvent.Completed)
 
                     val full = buffer.toString()
                     messageService.addAssistantMessage(session.id, full)
