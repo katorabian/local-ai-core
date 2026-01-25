@@ -7,7 +7,6 @@ class LlamaServerProcess(
     private val modelPath: File,
     private val port: Int = 8081,
     private val ctxSize: Int = 8192,
-    private val gpuLayers: Int = 99
 ) {
 
     private var process: Process? = null
@@ -22,10 +21,24 @@ class LlamaServerProcess(
 
         val cmd = listOf(
             exe.absolutePath,
-            "-m", modelPath.absolutePath,
+            "--model", modelPath.absolutePath,
+
+            "--host", "127.0.0.1",
             "--port", port.toString(),
-            "--ctx-size", ctxSize.toString(),
-            "--n-gpu-layers", gpuLayers.toString()
+
+            "--ctx-size", ctxSize.toString(),   // 8192 — нормально
+            "--gpu-layers", "all",              // КЛЮЧЕВО
+            "--parallel", "1",
+            "--threads", "4",
+            "--threads-batch", "4",
+            "--threads-http", "4",
+            "--sampling-seq", "temperature;top_p",
+            "--batch-size", "2048",
+            "--log-verbosity", "3",
+            "--device", "0",
+            "--kv-offload",
+
+            "--no-webui",                       // если не нужен
         )
 
         process = ProcessBuilder(cmd)
