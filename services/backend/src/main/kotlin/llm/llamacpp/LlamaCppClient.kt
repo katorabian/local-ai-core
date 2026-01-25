@@ -12,9 +12,11 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -53,10 +55,12 @@ class LlamaCppClient(
         model: String,
         messages: List<ChatMessage>
     ): String {
+        serverProcess.ensureAlive()
+        waitUntilReady()
 
         val response = client.post("$baseUrl/v1/chat/completions") {
             contentType(ContentType.Application.Json)
-            setBody(
+             setBody(
                 ChatRequest(
                     messages = messages.map {
                         ChatMessageDto(
@@ -76,6 +80,9 @@ class LlamaCppClient(
         messages: List<ChatMessage>,
         onToken: suspend (String) -> Unit
     ) {
+        serverProcess.ensureAlive()
+        waitUntilReady()
+
         val response = client.post("$baseUrl/v1/chat/completions") {
             contentType(ContentType.Application.Json)
             setBody(
@@ -102,7 +109,10 @@ class LlamaCppClient(
 
         while (!channel.isClosedForRead) {
             val read = channel.readAvailable(buffer)
-            if (read <= ZERO) continue
+            if (read <= ZERO) {
+                yield()
+                continue
+            }
 
             val chunk = buffer.decodeToString(ZERO, read)
 
@@ -128,5 +138,9 @@ class LlamaCppClient(
                 }
             }
         }
+    }
+
+    suspend fun waitUntilReady() {
+        serverProcess.waitUntilReady()
     }
 }

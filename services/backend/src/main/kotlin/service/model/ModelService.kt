@@ -1,6 +1,7 @@
 package com.katorabian.service.model
 
 import com.katorabian.domain.ChatMessage
+import com.katorabian.llm.llamacpp.LlamaCppClient
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
@@ -30,27 +31,30 @@ class ModelService(
             AtomicReference(ModelRuntimeState.COLD)
         }
 
+    //TODO
     suspend fun warmUp(model: ModelDescriptor) {
-        val state = stateRef(model.id)
-        val wasCold = state.compareAndSet(
-            ModelRuntimeState.COLD,
-            ModelRuntimeState.WARMING_UP
-        )
-        if (!wasCold) return
-
-        try {
-            // минимальный запрос для прогрева
-            model.client.generate(
-                model = model.id,
-                messages = listOf(
-                    ChatMessage.system("Warm-up")
-                )
-            )
-            state.set(ModelRuntimeState.READY)
-        } catch (e: Exception) {
-            state.set(ModelRuntimeState.ERROR)
-            throw e
-        }
+//        val state = stateRef(model.id)
+//        val wasCold = state.compareAndSet(
+//            ModelRuntimeState.COLD,
+//            ModelRuntimeState.WARMING_UP
+//        )
+//        if (!wasCold) return
+//
+//        try {
+//            if (model.client is LlamaCppClient) {
+//                model.client.waitUntilReady()
+//            }
+//
+//            model.client.generate(
+//                model = model.id,
+//                messages = listOf(ChatMessage.system("Warm-up"))
+//            )
+//
+//            state.set(ModelRuntimeState.READY)
+//        } catch (e: Exception) {
+//            state.set(ModelRuntimeState.ERROR)
+//            throw e
+//        }
     }
 
     suspend fun <T> withInference(

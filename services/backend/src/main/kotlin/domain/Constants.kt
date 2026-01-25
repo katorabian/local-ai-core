@@ -10,4 +10,5 @@ object Constants {
 
     // rest api
     const val CONNECT_TIMEOUT_MS = 5_000L
+    const val REQUEST_TIMEOUT_WARMUP_MS = 120_000L
 }

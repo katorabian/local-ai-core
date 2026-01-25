@@ -80,7 +80,7 @@ fun main() {
     )
 
 
-    warmUpAllModels(modelRouter, modelService)
+//    warmUpAllModels(modelRouter, modelService)
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
             json()
@@ -108,6 +108,7 @@ fun main() {
 
 }
 
+//TODO
 fun warmUpAllModels(
     modelRouter: ModelRouter,
     modelService: ModelService

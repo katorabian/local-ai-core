@@ -4,15 +4,15 @@ import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.Constants.CONNECT_TIMEOUT_MS
 import com.katorabian.domain.Constants.LLM_READ_BUFFER
 import com.katorabian.domain.Constants.NOT_FOUND
+import com.katorabian.domain.Constants.REQUEST_TIMEOUT_WARMUP_MS
 import com.katorabian.domain.Constants.ZERO
 import com.katorabian.domain.enum.Role
 import com.katorabian.llm.LlmClient
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -118,10 +118,5 @@ class OllamaClient(
                 Role.ASSISTANT -> "Assistant: ${msg.content}"
             }
         }
-    }
-
-    companion object {
-        private const val REQUEST_TIMEOUT_READY_MS = 30_000L
-        private const val REQUEST_TIMEOUT_WARMUP_MS = 120_000L
     }
 }
