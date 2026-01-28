@@ -11,7 +11,7 @@ class LlamaServerProcess(
     private val llamaDir: File,
     private val modelPath: File,
     private val port: Int = 8081,
-    private val ctxSize: Int = 8192,
+    private val ctxSize: Int = 4096,
 ) {
     @Volatile
     private var starting = false
@@ -41,8 +41,16 @@ class LlamaServerProcess(
             "--threads", "4",
             "--threads-batch", "4",
             "--threads-http", "4",
-
             "--batch-size", "2048",
+
+            "--top_p", "0.9",
+            "--top_k", "40",
+
+            //рекурсия в ответах
+            "--repeat_penalty", "1.15",
+            "--repeat_last_n", "128",
+            "--presence_penalty", "0.4",
+            "--frequency_penalty", "0.4",
 
             "--no-webui",
             "--log-verbosity", "3"
