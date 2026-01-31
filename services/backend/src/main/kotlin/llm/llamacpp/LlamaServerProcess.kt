@@ -35,6 +35,10 @@ abstract class LlamaServerProcess(
             .redirectErrorStream(true)
             .start()
 
+        Runtime.getRuntime().addShutdownHook(Thread {
+            stop()
+        })
+
         Thread {
             process!!
                 .inputStream
@@ -43,6 +47,20 @@ abstract class LlamaServerProcess(
                     lines.forEach { println("[llama:$port] $it") }
                 }
         }.start()
+    }
+
+    fun stop() {
+        val p = process ?: return
+        try {
+            p.destroy()
+            if (!p.waitFor(3, TimeUnit.SECONDS)) {
+                p.destroyForcibly()
+            }
+        } catch (ex: Exception) {
+            println(ex.buildSimpleLog())
+        } finally {
+            process = null
+        }
     }
 
     fun ensureAlive() {
