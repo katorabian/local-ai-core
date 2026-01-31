@@ -5,7 +5,9 @@ import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.api.model.modelRoutes
 import com.katorabian.domain.Utils.toFile
 import com.katorabian.llm.gatekeeper.LlmGatekeeper
+import com.katorabian.llm.llamacpp.LlamaChatServer
 import com.katorabian.llm.llamacpp.LlamaCppClient
+import com.katorabian.llm.llamacpp.LlamaGatekeeperServer
 import com.katorabian.llm.llamacpp.LlamaServerProcess
 import com.katorabian.prompt.PromptConfigFactory
 import com.katorabian.service.chat.ChatService
@@ -33,25 +35,35 @@ import io.ktor.server.routing.*
 import java.io.File
 
 fun main() {
-    val llamaServer = LlamaServerProcess(
-        llamaDir = File("F:/llm/llama.cpp-12.4"),
-        modelPath = ModelPresets.LocalChat.modelPath.toFile()
+    val llamaDir = File("F:/llm/llama.cpp-12.4")
+
+    // ===== CHAT (GPU) =====
+    val chatServer = LlamaChatServer(
+        llamaDir = llamaDir,
+        modelPath = ModelPresets.LocalChat.modelPath.toFile(),
+        port = 8081
+    )
+    val chatClient = LlamaCppClient(chatServer, "http://localhost:8081")
+
+    // ===== GATEKEEPER (CPU) =====
+    val gatekeeperServer = LlamaGatekeeperServer(
+        llamaDir = llamaDir,
+        modelPath = ModelPresets.Gatekeeper.modelPath.toFile(),
+        port = 8082
+    )
+    val gatekeeperClient = LlamaCppClient(gatekeeperServer, "http://localhost:8082")
+    val gatekeeper = LlmGatekeeper(
+        descriptor = ModelPresets.Gatekeeper,
+        llmClient = gatekeeperClient
     )
 
-    val llamaClient = LlamaCppClient(llamaServer)
-    val models = listOf(
-        ModelPresets.LocalChat
-    )
-
+    // ===== OTHER =====
+    val models = listOf(ModelPresets.LocalChat)
     val modelService = ModelService(models)
     val modelRouter = ModelRouter(
         models = models,
         fallbackOrder = listOf(ModelRole.CHAT)
     )
-
-    val gatekeeperDescriptor = ModelPresets.Gatekeeper
-    val gatekeeper = LlmGatekeeper(gatekeeperDescriptor, llamaClient)
-
 
     val store = ChatSessionStore()
     val sessionService = ChatSessionService(store)
@@ -72,7 +84,7 @@ fun main() {
     )
 
     val chatService = ChatService(
-        llmClient = llamaClient,
+        llmClient = chatClient,
         sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,

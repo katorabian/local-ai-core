@@ -6,17 +6,19 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.delay
 import java.io.File
+import java.util.concurrent.TimeUnit
 
-class LlamaServerProcess(
-    private val llamaDir: File,
-    private val modelPath: File,
-    private val port: Int = 8081,
-    private val ctxSize: Int = 4096,
+abstract class LlamaServerProcess(
+    protected val llamaDir: File,
+    protected val modelPath: File,
+    protected val port: Int,
+    protected val ctxSize: Int,
 ) {
+
     @Volatile
     private var starting = false
 
-    private var process: Process? = null
+    protected var process: Process? = null
 
     fun start() {
         if (process?.isAlive == true) return
@@ -26,35 +28,7 @@ class LlamaServerProcess(
             "llama-server.exe not found in $llamaDir"
         }
 
-        val cmd = listOf(
-            exe.absolutePath,
-            "--model", modelPath.absolutePath,
-
-            "--host", "127.0.0.1",
-            "--port", port.toString(),
-
-            "--ctx-size", ctxSize.toString(),
-
-            "--gpu-layers", "all",
-            "--device", "CUDA0",
-
-            "--threads", "4",
-            "--threads-batch", "4",
-            "--threads-http", "4",
-            "--batch-size", "2048",
-
-            "--top_p", "0.9",
-            "--top_k", "40",
-
-            //рекурсия в ответах
-            "--repeat_penalty", "1.15",
-            "--repeat_last_n", "128",
-            "--presence_penalty", "0.4",
-            "--frequency_penalty", "0.4",
-
-            "--no-webui",
-            "--log-verbosity", "3"
-        )
+        val cmd = buildCommand(exe)
 
         process = ProcessBuilder(cmd)
             .directory(llamaDir)
@@ -66,17 +40,10 @@ class LlamaServerProcess(
                 .inputStream
                 .bufferedReader()
                 .useLines { lines ->
-                    lines.forEach { println("[llama] $it") }
+                    lines.forEach { println("[llama:$port] $it") }
                 }
         }.start()
     }
-
-    fun stop() {
-        process?.destroy()
-        process = null
-    }
-
-    fun isAlive(): Boolean = process?.isAlive == true
 
     fun ensureAlive() {
         if (process?.isAlive == true || starting) return
@@ -84,7 +51,7 @@ class LlamaServerProcess(
         synchronized(this) {
             if (process?.isAlive == true || starting) return
             starting = true
-            println("llama-server is not alive, starting")
+            println("llama-server on port $port is not alive, starting")
             start()
             starting = false
         }
@@ -97,18 +64,26 @@ class LlamaServerProcess(
         val client = HttpClient(CIO)
         val start = System.currentTimeMillis()
 
-        client.use { client ->
+        client.use {
             while (System.currentTimeMillis() - start < timeoutMs) {
                 try {
-                    client.get("http://127.0.0.1:$port")
-                    return // сервер готов
-                } catch (_: Exception) {
+                    it.get("http://127.0.0.1:$port")
+                    return
+                } catch (ex: Exception) {
+                    println(ex.buildSimpleLog())
                     delay(pollDelayMs)
                 }
             }
         }
 
-        error("llama-server did not become ready in $timeoutMs ms")
+        error("llama-server on port $port did not become ready in $timeoutMs ms")
     }
 
+    fun Exception.buildSimpleLog(): String {
+        val ex = this
+        val tag = this@LlamaServerProcess::class.simpleName
+        return tag + '\n' + ex.message + '\n' + ex.stackTraceToString()
+    }
+
+    protected abstract fun buildCommand(exe: File): List<String>
 }
