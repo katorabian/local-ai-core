@@ -71,6 +71,8 @@ class ChatService(
         userQuery: String,
         emit: suspend (ChatEvent) -> Unit
     ) {
+        emit(ChatEvent.Thinking())
+
         val session = sessionService.get(sessionId)
         val decision = gatekeeper.interpret(userQuery)
 
@@ -85,8 +87,6 @@ class ChatService(
             onForwardToLlm = { userMessage ->
 
                 messageService.addUserMessage(session.id, userMessage)
-
-                emit(ChatEvent.Thinking())
 
                 val buffer = StringBuilder()
                 val prompt = promptService.buildPromptForSession(session)

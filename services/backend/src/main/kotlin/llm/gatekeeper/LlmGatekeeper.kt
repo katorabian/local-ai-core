@@ -7,6 +7,7 @@ import com.katorabian.service.gatekeeper.Gatekeeper
 import com.katorabian.service.gatekeeper.GatekeeperDecision
 import com.katorabian.service.input.ParsedCommand
 import com.katorabian.service.input.UserIntent
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -17,12 +18,18 @@ class LlmGatekeeper(
 
     override suspend fun interpret(input: String): GatekeeperDecision {
 
-        val raw = llmClient.generate(
-            model = descriptor.id,
-            messages = listOf(
-                system(buildPrompt(input))
-            )
-        )
+        val raw = runCatching {
+            withTimeout(5_000) {
+                llmClient.generate(
+                    model = descriptor.id,
+                    messages = listOf(
+                        system(buildPrompt(input))
+                    )
+                )
+            }
+        }.getOrElse { ex ->
+            return fallback("timeout:${ex::class.simpleName}")
+        }
 
         val parsed = runCatching {
             Json.decodeFromString(GatekeeperOutput.serializer(), raw)
@@ -71,6 +78,10 @@ class LlmGatekeeper(
         - без пояснений
         - без markdown
         - без лишних полей
+        - ответ должен быть ОДНИМ JSON-объектом
+        - не продолжай текст после }
+        - не размышляй
+        - не добавляй пробелы или переносы
 
         Запрос:
         $input
