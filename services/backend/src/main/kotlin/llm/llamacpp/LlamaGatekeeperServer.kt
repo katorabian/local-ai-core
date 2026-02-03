@@ -29,13 +29,14 @@ class LlamaGatekeeperServer(
             "--threads-batch", "2",
             "--threads-http", "2",
 
-            "--top_p", "0.9",
-            "--top_k", "40",
-
             "--no-webui",
             "--log-verbosity", "2",
 
             // length limit
-            "--n-predict", "64",
+            "--n-predict", "32",
+            "--temp", "0.0",
+            "--top-k", "1",
+            "--top-p", "1.0",
+            "--cache-ram", "0"
         )
 }
