@@ -28,3 +28,11 @@ data class ChatResponse(
         )
     }
 }
+
+@Serializable
+data class CompletionRequest(
+    val model: String,
+    val prompt: String,
+    val n_predict: Int = 4,
+    val temperature: Double = 0.0
+)

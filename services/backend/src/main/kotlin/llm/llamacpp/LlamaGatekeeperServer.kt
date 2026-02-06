@@ -33,10 +33,11 @@ class LlamaGatekeeperServer(
             "--log-verbosity", "2",
 
             // length limit
-            "--n-predict", "32",
-            "--temp", "0.0",
-            "--top-k", "1",
-            "--top-p", "1.0",
+            "--n-predict", "64",
+            "--temp", "0.15",
+            "--top-k", "20",
+            "--top-p", "0.9",
+            "--repeat-penalty", "1.1",
             "--cache-ram", "0"
         )
 }

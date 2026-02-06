@@ -1,6 +1,10 @@
 package com.katorabian.service.gatekeeper
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class ExecutionTarget {
-    LOCAL,
-    REMOTE
+    @SerialName("LOCAL") LOCAL,
+    @SerialName("REMOTE") REMOTE
 }

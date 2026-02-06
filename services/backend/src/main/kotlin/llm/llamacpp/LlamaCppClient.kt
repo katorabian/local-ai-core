@@ -11,19 +11,12 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.utils.io.readAvailable
+import io.ktor.utils.io.*
 import kotlinx.coroutines.yield
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.*
 
 class LlamaCppClient(
     private val serverProcess: LlamaServerProcess,
@@ -143,4 +136,32 @@ class LlamaCppClient(
     suspend fun waitUntilReady() {
         serverProcess.waitUntilReady()
     }
+
+    override suspend fun generateCompletion(
+        model: String,
+        prompt: String,
+        maxTokens: Int
+    ): String {
+        serverProcess.ensureAlive()
+        waitUntilReady()
+
+        val response = client.post("$baseUrl/v1/completions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CompletionRequest(
+                    model = model,
+                    prompt = prompt,
+                    n_predict = maxTokens,
+                    temperature = 0.0
+                )
+            )
+        }
+
+        val text = response.bodyAsText()
+        return runCatching {
+            Json.parseToJsonElement(text).toString()
+        }.getOrNull()
+            ?: text.trim()
+    }
+
 }

@@ -119,4 +119,12 @@ class OllamaClient(
             }
         }
     }
+
+    override suspend fun generateCompletion(
+        model: String,
+        prompt: String,
+        maxTokens: Int
+    ): String {
+        TODO("Not yet implemented")
+    }
 }

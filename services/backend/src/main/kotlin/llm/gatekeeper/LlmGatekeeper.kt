@@ -1,6 +1,5 @@
 package com.katorabian.llm.gatekeeper
 
-import com.katorabian.domain.ChatMessage
 import com.katorabian.llm.LlmClient
 import com.katorabian.service.gatekeeper.ExecutionTarget
 import com.katorabian.service.gatekeeper.Gatekeeper
@@ -10,6 +9,9 @@ import com.katorabian.service.input.UserIntent
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class LlmGatekeeper(
     private val descriptor: GatekeeperDescriptor,
@@ -18,23 +20,28 @@ class LlmGatekeeper(
 
     override suspend fun interpret(input: String): GatekeeperDecision {
 
-        val raw = runCatching {
-            withTimeout(5_000) {
-                llmClient.generate(
+        val rawResponse = runCatching {
+            withTimeout(30_000) {
+                llmClient.generateCompletion(
                     model = descriptor.id,
-                    messages = listOf(
-                        system(buildPrompt(input))
-                    )
+                    prompt = buildPrompt(input),
+                    maxTokens = 64
                 )
             }
         }.getOrElse { ex ->
             return fallback("timeout:${ex::class.simpleName}")
         }
 
+        val text = extractTextFromCompletion(rawResponse)
+            ?: return fallback("no_text")
+
+        println("Gatekeeper rawResponse='$rawResponse'")
+        println("Gatekeeper extracted text='$text'")
+
         val parsed = runCatching {
-            Json.decodeFromString(GatekeeperOutput.serializer(), raw)
+            Json.decodeFromString(GatekeeperOutput.serializer(), text)
         }.getOrElse {
-            return fallback(raw)
+            return fallback(text)
         }
 
         return GatekeeperDecision(
@@ -45,6 +52,29 @@ class LlmGatekeeper(
         )
     }
 
+
+
+    private fun extractTextFromCompletion(raw: String): String? =
+        runCatching {
+            val root = Json.parseToJsonElement(raw).jsonObject
+            root["choices"]
+                ?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.get("text")
+                ?.jsonPrimitive
+                ?.content
+                ?.extractJson()
+        }.onFailure {
+            println("extractTextFromCompletion: $it")
+        }.getOrNull()
+
+    private fun String.extractJson(): String {
+        return substringAfter("{")
+            .substringBeforeLast("}")
+            .let { "{$it}" }
+    }
+
     private fun fallback(raw: String) =
         GatekeeperDecision(
             executionTarget = ExecutionTarget.LOCAL,
@@ -52,8 +82,6 @@ class LlmGatekeeper(
             command = null,
             reason = "invalid_output:$raw"
         )
-
-    private fun system(text: String) = ChatMessage.system(text)
 
     private fun buildPrompt(input: String): String =
         """
@@ -81,10 +109,11 @@ class LlmGatekeeper(
         - ответ должен быть ОДНИМ JSON-объектом
         - не продолжай текст после }
         - не размышляй
-        - не добавляй пробелы или переносы
 
         Запрос:
         $input
+        
+        {
         """.trimIndent()
 }
 

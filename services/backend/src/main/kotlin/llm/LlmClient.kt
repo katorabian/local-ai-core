@@ -13,4 +13,11 @@ interface LlmClient {
         messages: List<ChatMessage>,
         onToken: suspend (String) -> Unit
     )
+
+    //Gatekeeper
+    suspend fun generateCompletion(
+        model: String,
+        prompt: String,
+        maxTokens: Int = 4
+    ): String
 }

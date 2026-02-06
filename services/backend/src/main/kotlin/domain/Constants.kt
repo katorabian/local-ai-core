@@ -1,6 +1,7 @@
 package com.katorabian.domain
 
 object Constants {
+    const val EMPTY_STRING = ""
     const val ZERO = 0
     const val NOT_FOUND = -1
 
