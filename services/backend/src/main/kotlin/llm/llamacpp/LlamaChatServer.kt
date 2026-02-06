@@ -1,5 +1,6 @@
 package com.katorabian.llm.llamacpp
 
+import com.katorabian.domain.Constants.MAX_CLIENTS
 import java.io.File
 
 class LlamaChatServer(
@@ -40,6 +41,10 @@ class LlamaChatServer(
             "--frequency_penalty", "0.4",
 
             "--no-webui",
-            "--log-verbosity", "3"
+            "--log-verbosity", "3",
+
+            // несколько клиентов
+            "--parallel", MAX_CLIENTS.toString(),
+//            "--n-slots", MAX_CLIENTS.toString(),
         )
 }

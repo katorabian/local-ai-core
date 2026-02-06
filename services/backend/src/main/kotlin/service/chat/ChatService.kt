@@ -15,6 +15,7 @@ import com.katorabian.service.model.ModelRouter
 import com.katorabian.service.model.ModelService
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.session.ChatSessionService
+import kotlinx.coroutines.withTimeout
 import java.util.*
 
 class ChatService(
@@ -94,13 +95,15 @@ class ChatService(
                 runCatching {
                     val model = defineModel(decision, userQuery, modelService)
                     modelService.withInference(model) {
-                        llmClient.stream(
-                            model = model.id,
-                            messages = prompt
-                        ) { chunk ->
-                            buffer.append(chunk)
-                            splitForSse(chunk).forEach { safePart ->
-                                emit(ChatEvent.Token(safePart))
+                        withTimeout(120_000) {
+                            llmClient.stream(
+                                model = model.id,
+                                messages = prompt
+                            ) { chunk ->
+                                buffer.append(chunk)
+                                splitForSse(chunk).forEach { safePart ->
+                                    emit(ChatEvent.Token(safePart))
+                                }
                             }
                         }
                     }

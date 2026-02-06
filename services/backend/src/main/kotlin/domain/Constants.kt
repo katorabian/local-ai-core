@@ -2,8 +2,12 @@ package com.katorabian.domain
 
 object Constants {
     const val EMPTY_STRING = ""
+    const val LINE_SEPARATOR = "\n"
+
+    const val ONE = 1
     const val ZERO = 0
     const val NOT_FOUND = -1
+    const val MAX_CLIENTS = 1
 
     // IO
     const val LLM_READ_BUFFER = 8 * 1024

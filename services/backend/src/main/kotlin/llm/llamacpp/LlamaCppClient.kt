@@ -2,7 +2,11 @@ package com.katorabian.llm.llamacpp
 
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.Constants.CONNECT_TIMEOUT_MS
+import com.katorabian.domain.Constants.LINE_SEPARATOR
 import com.katorabian.domain.Constants.LLM_READ_BUFFER
+import com.katorabian.domain.Constants.MAX_CLIENTS
+import com.katorabian.domain.Constants.NOT_FOUND
+import com.katorabian.domain.Constants.ONE
 import com.katorabian.domain.Constants.ZERO
 import com.katorabian.llm.LlmClient
 import io.ktor.client.*
@@ -15,6 +19,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.yield
 import kotlinx.serialization.json.*
 
@@ -22,6 +28,7 @@ class LlamaCppClient(
     private val serverProcess: LlamaServerProcess,
     private val baseUrl: String = "http://localhost:8081"
 ) : LlmClient {
+    private val streamSemaphore = Semaphore(MAX_CLIENTS)
 
     init {
         serverProcess.start()
@@ -72,7 +79,7 @@ class LlamaCppClient(
         model: String,
         messages: List<ChatMessage>,
         onToken: suspend (String) -> Unit
-    ) {
+    ) = streamSemaphore.withPermit {
         serverProcess.ensureAlive()
         waitUntilReady()
 
@@ -82,7 +89,6 @@ class LlamaCppClient(
                 buildJsonObject {
                     put("model", model)
                     put("stream", true)
-
                     putJsonArray("messages") {
                         messages.forEach { msg ->
                             add(
@@ -99,33 +105,59 @@ class LlamaCppClient(
 
         val channel = response.bodyAsChannel()
         val buffer = ByteArray(LLM_READ_BUFFER)
+        val sb = StringBuilder()
 
         while (!channel.isClosedForRead) {
             val read = channel.readAvailable(buffer)
-            if (read <= ZERO) {
+
+            if (read == NOT_FOUND)
+                break
+            if (read == ZERO) {
                 yield()
                 continue
             }
 
-            val chunk = buffer.decodeToString(ZERO, read)
+            sb.append(buffer.decodeToString(ZERO, read))
 
-            chunk.lineSequence().forEach { line ->
-                if (!line.startsWith("data:")) return@forEach
+            while (true) {
+                val index = sb.indexOf(LINE_SEPARATOR)
+                if (index == NOT_FOUND) break
+
+                val line = sb.substring(ZERO, index).trim()
+                sb.delete(ZERO, index + ONE)
+
+                if (!line.startsWith("data:")) continue
 
                 val payload = line.removePrefix("data:").trim()
                 if (payload == "[DONE]") return
 
                 val obj = runCatching {
                     Json.parseToJsonElement(payload).jsonObject
-                }.getOrNull() ?: return@forEach
+                }.getOrNull() ?: continue
 
-                val choices = obj["choices"]?.jsonArray ?: return@forEach
-                val delta = choices.firstOrNull()
-                    ?.jsonObject
-                    ?.get("delta")
-                    ?.jsonObject
+                obj["error"]?.let {
+                    throw RuntimeException(it.toString())
+                }
 
-                val content = delta?.get("content")?.jsonPrimitive?.content.takeIf { it != "null" }
+                val choice = obj["choices"]
+                    ?.jsonArray
+                    ?.firstOrNull()
+                    ?.jsonObject
+                    ?: continue
+
+                val finishReason = choice["finish_reason"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+
+                if (finishReason != null) return
+
+                val delta = choice["delta"]?.jsonObject
+
+                val content = delta
+                    ?.get("content")
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+
                 if (!content.isNullOrEmpty()) {
                     onToken(content)
                 }

@@ -1,5 +1,6 @@
 package com.katorabian.llm.llamacpp
 
+import com.katorabian.domain.Constants.MAX_CLIENTS
 import java.io.File
 
 class LlamaGatekeeperServer(
@@ -38,6 +39,10 @@ class LlamaGatekeeperServer(
             "--top-k", "20",
             "--top-p", "0.9",
             "--repeat-penalty", "1.1",
-            "--cache-ram", "0"
+            "--cache-ram", "0",
+
+            // несколько клиентов
+            "--parallel", MAX_CLIENTS.toString(),
+//            "--n-slots", MAX_CLIENTS.toString(),
         )
 }
