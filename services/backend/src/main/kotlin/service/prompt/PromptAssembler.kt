@@ -36,9 +36,33 @@ class PromptAssembler(
             .filter { it.role == Role.USER || it.role == Role.ASSISTANT }
             .sortedBy { it.createdAt }
 
+        val normalizedConversation = normalizeConversation(conversation)
+
         return buildList {
             add(systemMessage)
-            addAll(conversation)
+            addAll(normalizedConversation)
         }
+    }
+
+    /**
+     * Гарантирует:
+     * - нет подряд одинаковых ролей
+     * - порядок сохранён
+     */
+    private fun normalizeConversation(
+        conversation: List<ChatMessage>
+    ): List<ChatMessage> {
+        val result = ArrayList<ChatMessage>(conversation.size)
+
+        for (msg in conversation) {
+            val last = result.lastOrNull()
+            if (last?.role == msg.role) {
+                // удаляем предыдущий, оставляем последний по времени
+                result.removeAt(result.lastIndex)
+            }
+            result.add(msg)
+        }
+
+        return result
     }
 }

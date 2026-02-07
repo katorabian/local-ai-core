@@ -3,6 +3,8 @@ package com.katorabian.llm
 import com.katorabian.domain.ChatMessage
 
 interface LlmClient {
+
+    // Chat
     suspend fun generate(
         model: String,
         messages: List<ChatMessage>
@@ -18,6 +20,6 @@ interface LlmClient {
     suspend fun generateCompletion(
         model: String,
         prompt: String,
-        maxTokens: Int = 4
+        maxTokens: Int = 64
     ): String
 }

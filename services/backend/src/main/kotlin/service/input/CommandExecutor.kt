@@ -13,11 +13,14 @@ class CommandExecutor(
         command: ParsedCommand
     ): String {
 
-        return when (command.name) {
+        val spec = CommandSpec.byName(command.name)
+            ?: return "Unknown command: ${command.name}"
 
-            "/style" -> {
+        return when (spec) {
+
+            CommandSpec.STYLE -> {
                 val presetName = command.args.firstOrNull()
-                    ?: return "Usage: /style <neutral|sarcastic|formal|concise>"
+                    ?: return "Usage: /style <${spec.argsSpec}>"
 
                 val preset = runCatching {
                     BehaviorPrompt.Preset.valueOf(presetName.uppercase())
@@ -32,12 +35,10 @@ class CommandExecutor(
                 "Style changed to ${preset.name.lowercase()}"
             }
 
-            "/reset-style" -> {
+            CommandSpec.RESET_STYLE -> {
                 sessionService.resetBehavior(session.id)
                 "Style reset to neutral"
             }
-
-            else -> "Unknown command: ${command.name}"
         }
     }
 }

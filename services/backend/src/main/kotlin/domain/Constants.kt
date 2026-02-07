@@ -3,6 +3,7 @@ package com.katorabian.domain
 object Constants {
     const val EMPTY_STRING = ""
     const val LINE_SEPARATOR = "\n"
+    const val ENUM_JOIN_SEPARATOR = " | "
 
     const val ONE = 1
     const val ZERO = 0

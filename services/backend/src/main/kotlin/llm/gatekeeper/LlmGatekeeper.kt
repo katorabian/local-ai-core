@@ -1,11 +1,16 @@
 package com.katorabian.llm.gatekeeper
 
+import com.katorabian.domain.Constants.ENUM_JOIN_SEPARATOR
+import com.katorabian.domain.Constants.LINE_SEPARATOR
 import com.katorabian.llm.LlmClient
+import com.katorabian.prompt.BehaviorPrompt
 import com.katorabian.service.gatekeeper.ExecutionTarget
 import com.katorabian.service.gatekeeper.Gatekeeper
 import com.katorabian.service.gatekeeper.GatekeeperDecision
+import com.katorabian.service.input.CommandSpec
 import com.katorabian.service.input.ParsedCommand
 import com.katorabian.service.input.UserIntent
+import com.katorabian.service.input.UserIntentSpec
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -25,7 +30,6 @@ class LlmGatekeeper(
                 llmClient.generateCompletion(
                     model = descriptor.id,
                     prompt = buildPrompt(input),
-                    maxTokens = 64
                 )
             }
         }.getOrElse { ex ->
@@ -83,38 +87,61 @@ class LlmGatekeeper(
             reason = "invalid_output:$raw"
         )
 
-    private fun buildPrompt(input: String): String =
-        """
-        Ты — интерпретатор пользовательского ввода.
+    private fun buildPrompt(input: String): String {
 
-        Верни ТОЛЬКО валидный JSON строго по схеме:
+        val executionTargets = ExecutionTarget.entries
+            .joinToString(ENUM_JOIN_SEPARATOR) { it.name }
 
-        {
-          "executionTarget": "LOCAL | REMOTE",
-          "intent": "CHAT | CODE | CHANGE_STYLE | COMMAND",
-          "command": {
-            "name": "/style",
-            "args": ["sarcastic"]
-          } | null
-        }
+        val intents = UserIntentSpec.allWireNames()
+            .joinToString(ENUM_JOIN_SEPARATOR)
+        val intentDescriptions = UserIntentSpec.entries
+            .joinToString(LINE_SEPARATOR) { "- ${it.wireName}: ${it.description}" }
 
-        Правила:
-        - личное, эмоции, RP → LOCAL
-        - код, архитектура, reasoning → REMOTE
-        - если команда начинается с "/" → intent=COMMAND
-        - если пользователь просит изменить стиль → CHANGE_STYLE
-        - без пояснений
-        - без markdown
-        - без лишних полей
-        - ответ должен быть ОДНИМ JSON-объектом
-        - не продолжай текст после }
-        - не размышляй
 
-        Запрос:
-        $input
-        
-        {
-        """.trimIndent()
+        val commandSpecs = CommandSpec.entries
+            .joinToString(LINE_SEPARATOR) { spec ->
+                when (val args = spec.argsSpec) {
+                    CommandSpec.ArgsSpec.None ->
+                        "- ${spec.commandName} (no arguments)"
+                    is CommandSpec.ArgsSpec.EnumArg ->
+                        "- ${spec.commandName} <${args.name}>: ${args.values.joinToString(ENUM_JOIN_SEPARATOR)}"
+                }
+            }
+
+        return """
+Ты — интерпретатор пользовательского ввода.
+Твоя задача — классификация, не генерация.
+
+Верни ОДИН JSON-объект. Без пояснений. Без текста вне JSON.
+
+Формат ответа:
+
+{
+  "executionTarget": "$executionTargets",
+  "intent": "$intents",
+  "command": {
+    "name": String,
+    "args": [String]
+  } | null
+}
+
+Допустимые intent'ы:
+$intentDescriptions
+
+Допустимые команды:
+$commandSpecs
+
+Правила:
+1. command != null ТОЛЬКО если intent == Command
+2. Используй ТОЛЬКО команды и аргументы из списка выше
+3. Если команда не подходит — intent = Chat и command = null
+4. Ответ должен начинаться с '{' и заканчиваться '}'
+5. Никакого markdown, комментариев или пояснений
+
+Ввод пользователя:
+$input
+""".trimIndent()
+    }
 }
 
 @Serializable
