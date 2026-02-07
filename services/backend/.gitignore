@@ -1,5 +1,6 @@
 .gradle
 build/
+src/main/kotlin/filetree_dump.py
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

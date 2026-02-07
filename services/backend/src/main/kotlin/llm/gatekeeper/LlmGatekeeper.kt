@@ -1,5 +1,6 @@
 package com.katorabian.llm.gatekeeper
 
+import com.katorabian.domain.Constants.EMPTY_STRING
 import com.katorabian.domain.Constants.ENUM_JOIN_SEPARATOR
 import com.katorabian.domain.Constants.LINE_SEPARATOR
 import com.katorabian.llm.LlmClient
@@ -42,16 +43,40 @@ class LlmGatekeeper(
         println("Gatekeeper rawResponse='$rawResponse'")
         println("Gatekeeper extracted text='$text'")
 
-        val parsed = runCatching {
+        val gatekeeperOutput = runCatching {
             Json.decodeFromString(GatekeeperOutput.serializer(), text)
         }.getOrElse {
             return fallback(text)
         }
+        val runtimeIntent = when (gatekeeperOutput.intent) {
+            UserIntent.Chat::class.java.simpleName -> UserIntent.Chat
+            UserIntent.Code::class.java.simpleName -> UserIntent.Code
+
+            UserIntent.Command::class.java.simpleName -> UserIntent.Command(
+                name = gatekeeperOutput.command?.name ?: EMPTY_STRING
+            )
+
+            UserIntent.ChangeStyle::class.java.simpleName -> {
+                val presetName = gatekeeperOutput.command?.args?.firstOrNull()
+                    ?: return fallback("missing_style")
+
+                val preset = runCatching {
+                    BehaviorPrompt.Preset.valueOf(presetName.uppercase())
+                }.getOrElse {
+                    return fallback("invalid_style:$presetName")
+                }
+
+                UserIntent.ChangeStyle(preset)
+            }
+
+            else -> return fallback("unknown_intent:${gatekeeperOutput.intent}")
+        }
+
 
         return GatekeeperDecision(
-            executionTarget = parsed.executionTarget,
-            intent = parsed.intent,
-            command = parsed.command,
+            executionTarget = gatekeeperOutput.executionTarget,
+            intent = runtimeIntent,
+            command = gatekeeperOutput.command,
             reason = "gatekeeper"
         )
     }
@@ -147,6 +172,6 @@ $input
 @Serializable
 private data class GatekeeperOutput(
     val executionTarget: ExecutionTarget,
-    val intent: UserIntent,
+    val intent: String,
     val command: ParsedCommand? = null
 )
