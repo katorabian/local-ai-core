@@ -55,7 +55,7 @@ class ChatService(
                 val response = modelService.withInference(model) {
                     llmClient.generate(
                         model = model.id,
-                        messages = prompt
+                        prompt = prompt
                     )
                 }
 
@@ -90,13 +90,13 @@ class ChatService(
                 messageService.addUserMessage(session.id, userMessage)
 
                 val buffer = StringBuilder()
-                val prompt = promptService.buildPromptV2(session)
+                val prompt = promptService.buildPromptForSession(session)
 
                 runCatching {
                     val model = defineModel(decision, userQuery, modelService)
                     modelService.withInference(model) {
                         withTimeout(120_000) {
-                            llmClient.streamPrompt(
+                            llmClient.stream(
                                 model = model.id,
                                 prompt = prompt
                             ) { chunk ->

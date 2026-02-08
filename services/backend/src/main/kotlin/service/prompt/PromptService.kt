@@ -1,6 +1,5 @@
 package com.katorabian.service.prompt
 
-import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.storage.ChatSessionStore
 
@@ -10,18 +9,6 @@ class PromptService(
 ) {
 
     fun buildPromptForSession(
-        session: ChatSession,
-        taskHints: List<String> = emptyList()
-    ): List<ChatMessage> {
-        val history = store.getMessages(session.id)
-        return assembler.assemble(
-            session = session,
-            history = history,
-            taskHints = taskHints
-        )
-    }
-
-    fun buildPromptV2(
         session: ChatSession,
         taskHints: List<String> = emptyList()
     ): String {

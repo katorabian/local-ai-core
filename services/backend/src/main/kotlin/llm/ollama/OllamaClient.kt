@@ -37,10 +37,8 @@ class OllamaClient(
 
     override suspend fun generate(
         model: String,
-        messages: List<ChatMessage>
+        prompt: String
     ): String {
-        val prompt = buildPrompt(messages)
-
         val response = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
             timeout {
@@ -60,11 +58,9 @@ class OllamaClient(
 
     override suspend fun stream(
         model: String,
-        messages: List<ChatMessage>,
+        prompt: String,
         onToken: suspend (String) -> Unit
     ) {
-        val prompt = buildPrompt(messages)
-
         val channel = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
             timeout {
@@ -109,23 +105,6 @@ class OllamaClient(
                 }
             }
         }
-    }
-    private fun buildPrompt(messages: List<ChatMessage>): String {
-        return messages.joinToString("\n") { msg ->
-            when (msg.role) {
-                Role.SYSTEM -> "System: ${msg.content}"
-                Role.USER -> "User: ${msg.content}"
-                Role.ASSISTANT -> "Assistant: ${msg.content}"
-            }
-        }
-    }
-
-    override suspend fun streamPrompt(
-        model: String,
-        prompt: String,
-        onToken: suspend (String) -> Unit
-    ) {
-        TODO("Not yet implemented")
     }
 
     override suspend fun generateCompletion(

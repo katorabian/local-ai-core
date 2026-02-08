@@ -1,22 +1,14 @@
 package com.katorabian.llm
 
-import com.katorabian.domain.ChatMessage
-
 interface LlmClient {
 
     // Chat
     suspend fun generate(
         model: String,
-        messages: List<ChatMessage>
+        prompt: String
     ): String
 
     suspend fun stream(
-        model: String,
-        messages: List<ChatMessage>,
-        onToken: suspend (String) -> Unit
-    )
-
-    suspend fun streamPrompt(
         model: String,
         prompt: String,
         onToken: suspend (String) -> Unit

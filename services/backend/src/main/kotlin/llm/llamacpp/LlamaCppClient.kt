@@ -1,7 +1,7 @@
 package com.katorabian.llm.llamacpp
 
-import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.Constants.CONNECT_TIMEOUT_MS
+import com.katorabian.domain.Constants.EMPTY_STRING
 import com.katorabian.domain.Constants.LINE_SEPARATOR
 import com.katorabian.domain.Constants.LLM_READ_BUFFER
 import com.katorabian.domain.Constants.MAX_CLIENTS
@@ -10,7 +10,6 @@ import com.katorabian.domain.Constants.ONE
 import com.katorabian.domain.Constants.ZERO
 import com.katorabian.llm.LlmClient
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -53,52 +52,51 @@ class LlamaCppClient(
 
     override suspend fun generate(
         model: String,
-        messages: List<ChatMessage>
+        prompt: String
     ): String {
         serverProcess.ensureAlive()
         waitUntilReady()
 
-        val response = client.post("$baseUrl/v1/chat/completions") {
+        val response = client.post("$baseUrl/v1/completions") {
             contentType(ContentType.Application.Json)
              setBody(
-                ChatRequest(
-                    messages = messages.map {
-                        ChatMessageDto(
-                            role = it.role.name.lowercase(),
-                            content = it.content
-                        )
-                    }
-                )
+                 CompletionRequest(
+                     model = model,
+                     prompt = prompt,
+                     n_predict = 1024,
+                     temperature = 0.7
+                 )
             )
-        }.body<ChatResponse>()
+        }
 
-        return response.choices.first().message.content
+        val text = response.bodyAsText()
+        val json = Json.parseToJsonElement(text).jsonObject
+
+        return json["choices"]
+            ?.jsonArray
+            ?.firstOrNull()
+            ?.jsonObject
+            ?.get("text")
+            ?.jsonPrimitive
+            ?.content
+            ?: EMPTY_STRING
     }
 
     override suspend fun stream(
         model: String,
-        messages: List<ChatMessage>,
+        prompt: String,
         onToken: suspend (String) -> Unit
     ) = streamSemaphore.withPermit {
         serverProcess.ensureAlive()
         waitUntilReady()
 
-        val response = client.post("$baseUrl/v1/chat/completions") {
+        val response = client.post("$baseUrl/v1/completions") {
             contentType(ContentType.Application.Json)
             setBody(
                 buildJsonObject {
                     put("model", model)
+                    put("prompt", prompt)
                     put("stream", true)
-                    putJsonArray("messages") {
-                        messages.forEach { msg ->
-                            add(
-                                buildJsonObject {
-                                    put("role", msg.role.name.lowercase())
-                                    put("content", msg.content)
-                                }
-                            )
-                        }
-                    }
                 }
             )
         }
@@ -151,71 +149,12 @@ class LlamaCppClient(
 
                 if (finishReason != null) return
 
-                val delta = choice["delta"]?.jsonObject
-
-                val content = delta
-                    ?.get("content")
-                    ?.jsonPrimitive
-                    ?.contentOrNull
-
-                if (!content.isNullOrEmpty() && !looksLikeSystemLeak(content)) {
-                    onToken(content)
-                }
-            }
-        }
-    }
-
-    override suspend fun streamPrompt(
-        model: String,
-        prompt: String,
-        onToken: suspend (String) -> Unit
-    ) = streamSemaphore.withPermit {
-        serverProcess.ensureAlive()
-        waitUntilReady()
-
-        val response = client.post("$baseUrl/v1/completions") {
-            contentType(ContentType.Application.Json)
-            setBody(
-                buildJsonObject {
-                    put("model", model)
-                    put("prompt", prompt)
-                    put("stream", true)
-                }
-            )
-        }
-
-        val channel = response.bodyAsChannel()
-        val buffer = ByteArray(LLM_READ_BUFFER)
-        val sb = StringBuilder()
-
-        while (!channel.isClosedForRead) {
-            val read = channel.readAvailable(buffer)
-            if (read <= 0) {
-                yield()
-                continue
-            }
-
-            sb.append(buffer.decodeToString(0, read))
-
-            while (true) {
-                val idx = sb.indexOf("\n")
-                if (idx == -1) break
-
-                val line = sb.substring(0, idx).trim()
-                sb.delete(0, idx + 1)
-
-                if (!line.startsWith("data:")) continue
-                val payload = line.removePrefix("data:").trim()
-                if (payload == "[DONE]") return
-
-                val obj = Json.parseToJsonElement(payload).jsonObject
-                val text = obj["choices"]
-                    ?.jsonArray
-                    ?.firstOrNull()
-                    ?.jsonObject
-                    ?.get("text")
-                    ?.jsonPrimitive
-                    ?.content
+                val text = choice["text"]?.jsonPrimitive?.contentOrNull
+                    ?: choice["delta"]
+                        ?.jsonObject
+                        ?.get("content")
+                        ?.jsonPrimitive
+                        ?.contentOrNull
 
                 if (!text.isNullOrEmpty()) {
                     onToken(text)
@@ -223,15 +162,6 @@ class LlamaCppClient(
             }
         }
     }
-
-    private fun looksLikeSystemLeak(text: String): Boolean =
-        text.startsWith("## Prompt") ||
-                text.startsWith("## Assistant") ||
-                text.contains("chat_template") ||
-                text.contains("The assistant's response is") ||
-                text.contains("conversations/") ||
-                text.contains("jinja") ||
-                text.contains("Context The user has not provided")
 
     suspend fun waitUntilReady() {
         serverProcess.waitUntilReady()

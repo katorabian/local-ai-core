@@ -40,6 +40,8 @@ class LlamaGatekeeperServer(
             "--top-p", "0.9",
             "--repeat-penalty", "1.1",
             "--cache-ram", "0",
+//            "--no-thoughts",
+
 
             // несколько клиентов
             "--parallel", MAX_CLIENTS.toString(),
