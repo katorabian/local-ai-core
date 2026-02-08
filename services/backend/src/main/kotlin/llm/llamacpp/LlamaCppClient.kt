@@ -1,5 +1,6 @@
 package com.katorabian.llm.llamacpp
 
+import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.Constants.CONNECT_TIMEOUT_MS
 import com.katorabian.domain.Constants.EMPTY_STRING
 import com.katorabian.domain.Constants.LINE_SEPARATOR
@@ -10,6 +11,7 @@ import com.katorabian.domain.Constants.ONE
 import com.katorabian.domain.Constants.ZERO
 import com.katorabian.llm.LlmClient
 import io.ktor.client.*
+import io.ktor.client.call.body
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -52,52 +54,59 @@ class LlamaCppClient(
 
     override suspend fun generate(
         model: String,
-        prompt: String
+        messages: List<ChatMessage>
     ): String {
         serverProcess.ensureAlive()
         waitUntilReady()
 
-        val response = client.post("$baseUrl/v1/completions") {
-            contentType(ContentType.Application.Json)
-             setBody(
-                 CompletionRequest(
-                     model = model,
-                     prompt = prompt,
-                     n_predict = 1024,
-                     temperature = 0.7
-                 )
-            )
-        }
-
-        val text = response.bodyAsText()
-        val json = Json.parseToJsonElement(text).jsonObject
-
-        return json["choices"]
-            ?.jsonArray
-            ?.firstOrNull()
-            ?.jsonObject
-            ?.get("text")
-            ?.jsonPrimitive
-            ?.content
-            ?: EMPTY_STRING
-    }
-
-    override suspend fun stream(
-        model: String,
-        prompt: String,
-        onToken: suspend (String) -> Unit
-    ) = streamSemaphore.withPermit {
-        serverProcess.ensureAlive()
-        waitUntilReady()
-
-        val response = client.post("$baseUrl/v1/completions") {
+        val response = client.post("$baseUrl/v1/chat/completions") {
             contentType(ContentType.Application.Json)
             setBody(
                 buildJsonObject {
                     put("model", model)
-                    put("prompt", prompt)
+                    putJsonArray("messages") {
+                        messages.forEach {
+                            add(
+                                buildJsonObject {
+                                    put("role", it.role.name.lowercase())
+                                    put("content", it.content)
+                                }
+                            )
+                        }
+                    }
+                }.also { println("User request: $it") }
+            )
+        }.body<ChatResponse>()
+
+        return response.choices.first().message.content
+    }
+
+    override suspend fun stream(
+        model: String,
+        messages: List<ChatMessage>,
+        onToken: suspend (String) -> Unit
+    ) = streamSemaphore.withPermit {
+
+        serverProcess.ensureAlive()
+        waitUntilReady()
+
+        val response = client.post("$baseUrl/v1/chat/completions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                buildJsonObject {
+                    put("model", model)
                     put("stream", true)
-                }
+                    putJsonArray("messages") {
+                        messages.forEach {
+                            add(
+                                buildJsonObject {
+                                    put("role", it.role.name.lowercase())
+                                    put("content", it.content)
+                                }
+                            )
+                        }
+                    }
+                }.also { println("User request: $it") }
             )
         }
 
@@ -119,25 +128,22 @@ class LlamaCppClient(
 
             while (true) {
                 val index = sb.indexOf(LINE_SEPARATOR)
-                if (index == NOT_FOUND) break
+                if (index < ZERO) break
 
                 val line = sb.substring(ZERO, index).trim()
                 sb.delete(ZERO, index + ONE)
 
                 if (!line.startsWith("data:")) continue
-
                 val payload = line.removePrefix("data:").trim()
                 if (payload == "[DONE]") return
 
-                val obj = runCatching {
+                val json = runCatching {
                     Json.parseToJsonElement(payload).jsonObject
-                }.getOrNull() ?: continue
+                }.getOrNull()?.also { json ->
+                    json["error"]?.let { throw RuntimeException(it.toString()) }
+                } ?: continue
 
-                obj["error"]?.let {
-                    throw RuntimeException(it.toString())
-                }
-
-                val choice = obj["choices"]
+                val choice = json["choices"]
                     ?.jsonArray
                     ?.firstOrNull()
                     ?.jsonObject
@@ -149,15 +155,15 @@ class LlamaCppClient(
 
                 if (finishReason != null) return
 
-                val text = choice["text"]?.jsonPrimitive?.contentOrNull
-                    ?: choice["delta"]
-                        ?.jsonObject
-                        ?.get("content")
-                        ?.jsonPrimitive
-                        ?.contentOrNull
+                val delta = choice["delta"]?.jsonObject
 
-                if (!text.isNullOrEmpty()) {
-                    onToken(text)
+                val content = delta
+                    ?.get("content")
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+
+                if (!content.isNullOrEmpty()) {
+                    onToken(content)
                 }
             }
         }

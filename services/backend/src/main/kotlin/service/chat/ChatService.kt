@@ -50,12 +50,12 @@ class ChatService(
             onForwardToLlm = { userMessage ->
                 messageService.addUserMessage(session.id, userMessage)
 
-                val prompt = promptService.buildPromptForSession(session)
+                val chatMessages = promptService.buildPromptForStream(session)
                 val model = defineModel(decision, userQuery, modelService)
                 val response = modelService.withInference(model) {
                     llmClient.generate(
                         model = model.id,
-                        prompt = prompt
+                        messages = chatMessages
                     )
                 }
 
@@ -90,7 +90,7 @@ class ChatService(
                 messageService.addUserMessage(session.id, userMessage)
 
                 val buffer = StringBuilder()
-                val prompt = promptService.buildPromptForSession(session)
+                val chatMessages = promptService.buildPromptForStream(session)
 
                 runCatching {
                     val model = defineModel(decision, userQuery, modelService)
@@ -98,7 +98,7 @@ class ChatService(
                         withTimeout(120_000) {
                             llmClient.stream(
                                 model = model.id,
-                                prompt = prompt
+                                messages = chatMessages
                             ) { chunk ->
                                 buffer.append(chunk)
                                 splitForSse(chunk).forEach { safePart ->

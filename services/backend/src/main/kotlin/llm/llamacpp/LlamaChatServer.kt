@@ -42,8 +42,6 @@ class LlamaChatServer(
 
             "--no-webui",
             "--log-verbosity", "3",
-            "--chat-template", "none",
-            "--cache-ram", "0",
 
             // несколько клиентов
             "--parallel", MAX_CLIENTS.toString(),
