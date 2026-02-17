@@ -26,20 +26,20 @@ class LlamaGatekeeperServer(
 
             "--gpu-layers", "0",
 
-            "--threads", "4",
-            "--threads-batch", "2",
-            "--threads-http", "2",
+            "--threads", "8",
+            "--threads-batch", "4",
+            "--threads-http", "4",
 
             "--no-webui",
             "--log-verbosity", "2",
 
             // length limit
             "--n-predict", "64",
-            "--temp", "0.15",
+            "--temp", "0.1",
             "--top-k", "20",
             "--top-p", "0.9",
-            "--repeat-penalty", "1.1",
-            "--cache-ram", "0",
+            "--repeat-penalty", "1.05",
+            "--cache-ram", "1",
 //            "--no-thoughts",
 
 

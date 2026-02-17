@@ -3,6 +3,8 @@ package com.katorabian.llm.gatekeeper
 import com.katorabian.domain.Constants.EMPTY_STRING
 import com.katorabian.domain.Constants.ENUM_JOIN_SEPARATOR
 import com.katorabian.domain.Constants.LINE_SEPARATOR
+import com.katorabian.domain.Constants.ONE
+import com.katorabian.domain.Constants.ZERO
 import com.katorabian.llm.LlmClient
 import com.katorabian.prompt.BehaviorPrompt
 import com.katorabian.service.gatekeeper.ExecutionTarget
@@ -24,10 +26,25 @@ class LlmGatekeeper(
     private val llmClient: LlmClient
 ) : Gatekeeper {
 
-    override suspend fun interpret(input: String): GatekeeperDecision {
+    private val json = Json { ignoreUnknownKeys = true }
 
+    /**
+     * Прогрев модели.
+     * Вызывается один раз после старта приложения.
+     */
+    suspend fun warmUp() {
+        runCatching {
+            llmClient.generateCompletion(
+                model = descriptor.id,
+                prompt = "Classify: hello",
+                maxTokens = 8
+            )
+        }
+    }
+
+    override suspend fun interpret(input: String): GatekeeperDecision {
         val rawResponse = runCatching {
-            withTimeout(30_000) {
+            withTimeout(8_000) {
                 llmClient.generateCompletion(
                     model = descriptor.id,
                     prompt = buildPrompt(input),
@@ -44,19 +61,20 @@ class LlmGatekeeper(
         println("Gatekeeper extracted text='$text'")
 
         val gatekeeperOutput = runCatching {
-            Json.decodeFromString(GatekeeperOutput.serializer(), text)
+            json.decodeFromString(GatekeeperOutput.serializer(), text)
         }.getOrElse {
-            return fallback(text)
+            return fallback("invalid_json: $text")
         }
         val runtimeIntent = when (gatekeeperOutput.intent) {
-            UserIntent.Chat::class.java.simpleName -> UserIntent.Chat
-            UserIntent.Code::class.java.simpleName -> UserIntent.Code
+            UserIntentSpec.CHAT.wireName -> UserIntent.Chat
+            UserIntentSpec.CODE.wireName -> UserIntent.Code
 
-            UserIntent.Command::class.java.simpleName -> UserIntent.Command(
-                name = gatekeeperOutput.command?.name ?: EMPTY_STRING
-            )
+            UserIntentSpec.COMMAND.wireName -> {
+                val name = gatekeeperOutput.command?.name ?: EMPTY_STRING
+                UserIntent.Command(name)
+            }
 
-            UserIntent.ChangeStyle::class.java.simpleName -> {
+            UserIntentSpec.CHANGE_STYLE.wireName -> {
                 val presetName = gatekeeperOutput.command?.args?.firstOrNull()
                     ?: return fallback("missing_style")
 
@@ -99,9 +117,10 @@ class LlmGatekeeper(
         }.getOrNull()
 
     private fun String.extractJson(): String {
-        return substringAfter("{")
-            .substringBeforeLast("}")
-            .let { "{$it}" }
+        val start = indexOf('{')
+        val end = lastIndexOf('}')
+        if (start < ZERO || end < ZERO || end <= start) return this
+        return substring(start, end + ONE)
     }
 
     private fun fallback(raw: String) =
@@ -134,41 +153,24 @@ class LlmGatekeeper(
             }
 
         return """
-Ты — интерпретатор пользовательского ввода.
-Твоя задача — классификация, не генерация.
-
-Верни ОДИН JSON-объект. Без пояснений. Без текста вне JSON.
-
-Формат ответа:
+Ты — классификатор пользовательского ввода.
+Верни строго один JSON без пояснений.
 
 {
   "executionTarget": "$executionTargets",
   "intent": "$intents",
-  "command": {
-    "name": String,
-    "args": [String]
-  } | null
+  "command": { "name": String, "args": [String] } | null
 }
 
-Допустимые intent'ы:
+Допустимые intent:
 $intentDescriptions
 
 Допустимые команды:
 $commandSpecs
 
-Правила:
-1. command != null ТОЛЬКО если intent == Command
-2. Используй ТОЛЬКО команды и аргументы из списка выше
-3. Запросы про код, программирование, API, UI, Android → intent = Code
-4. Если команда не подходит — intent = Chat и command = null
-5. Ответ должен начинаться с '{' и заканчиваться '}'
-6. Никакого markdown, комментариев или пояснений
-
-Ввод пользователя:
+Ввод:
 $input
-
-{
-""".trimIndent()
+        """.trimIndent()
     }
 }
 

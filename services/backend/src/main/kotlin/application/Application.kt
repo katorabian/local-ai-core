@@ -29,6 +29,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 fun main() {
@@ -52,7 +53,10 @@ fun main() {
     val gatekeeper = LlmGatekeeper(
         descriptor = ModelPresets.Gatekeeper,
         llmClient = gatekeeperClient
-    )
+    ).also {
+        runBlocking { it.warmUp() }
+    }
+
 
     // ===== OTHER =====
     val models = listOf(ModelPresets.LocalChat)
