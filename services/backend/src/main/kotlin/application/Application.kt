@@ -29,7 +29,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import java.io.File
 
 fun main() {
@@ -53,9 +53,7 @@ fun main() {
     val gatekeeper = LlmGatekeeper(
         descriptor = ModelPresets.Gatekeeper,
         llmClient = gatekeeperClient
-    ).also {
-        runBlocking { it.warmUp() }
-    }
+    )
 
 
     // ===== OTHER =====
@@ -114,6 +112,18 @@ fun main() {
             chatStreamRoute(chatService)
 
             modelRoutes(modelService)
+        }
+
+        environment.monitor.subscribe(ApplicationStarted) {
+            // Асинхронный warm-up без блокировки main thread
+            launch {
+                try {
+                    gatekeeper.warmUp()
+                    println("Gatekeeper warm-up completed")
+                } catch (e: Exception) {
+                    println("Gatekeeper warm-up failed: ${e.message}")
+                }
+            }
         }
     }.start(wait = true)
 
