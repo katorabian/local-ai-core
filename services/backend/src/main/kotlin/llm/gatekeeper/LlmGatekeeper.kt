@@ -13,7 +13,6 @@ import com.katorabian.service.gatekeeper.GatekeeperDecision
 import com.katorabian.service.input.CommandSpec
 import com.katorabian.service.input.ParsedCommand
 import com.katorabian.service.input.UserIntent
-import com.katorabian.service.input.UserIntentSpec
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -65,30 +64,10 @@ class LlmGatekeeper(
         }.getOrElse {
             return fallback("invalid_json: $text")
         }
-        val runtimeIntent = when (gatekeeperOutput.intent) {
-            UserIntentSpec.CHAT.wireName -> UserIntent.Chat
-            UserIntentSpec.CODE.wireName -> UserIntent.Code
-
-            UserIntentSpec.COMMAND.wireName -> {
-                val name = gatekeeperOutput.command?.name ?: EMPTY_STRING
-                UserIntent.Command(name)
-            }
-
-            UserIntentSpec.CHANGE_STYLE.wireName -> {
-                val presetName = gatekeeperOutput.command?.args?.firstOrNull()
-                    ?: return fallback("missing_style")
-
-                val preset = runCatching {
-                    BehaviorPrompt.Preset.valueOf(presetName.uppercase())
-                }.getOrElse {
-                    return fallback("invalid_style:$presetName")
-                }
-
-                UserIntent.ChangeStyle(preset)
-            }
-
-            else -> return fallback("unknown_intent:${gatekeeperOutput.intent}")
-        }
+        val runtimeIntent = UserIntent.fromWireName(
+            gatekeeperOutput.intent,
+            gatekeeperOutput.command
+        ) ?: return fallback("unknown_intent:${gatekeeperOutput.intent}")
 
 
         return GatekeeperDecision(
@@ -136,10 +115,9 @@ class LlmGatekeeper(
         val executionTargets = ExecutionTarget.entries
             .joinToString(ENUM_JOIN_SEPARATOR) { it.name }
 
-        val intents = UserIntentSpec.allWireNames()
+        val intents = UserIntent.supportedVariants
             .joinToString(ENUM_JOIN_SEPARATOR)
-        val intentDescriptions = UserIntentSpec.entries
-            .joinToString(LINE_SEPARATOR) { "- ${it.wireName}: ${it.description}" }
+        val intentDescriptions = UserIntent.intentDescriptions
 
 
         val commandSpecs = CommandSpec.entries
