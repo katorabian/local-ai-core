@@ -38,7 +38,7 @@ class ChatService(
         sessionId: UUID,
         userQuery: String
     ): ChatMessage = executionManager.execute(
-        UserContext.SINGLE_USER_ID
+        sessionId
     ) {
 
         val session = sessionService.get(sessionId)
@@ -79,7 +79,7 @@ class ChatService(
         userQuery: String,
         emit: suspend (ChatEvent) -> Unit
     ) = executionManager.execute(
-        UserContext.SINGLE_USER_ID
+        sessionId
     ) {
 
         emit(ChatEvent.Thinking())
