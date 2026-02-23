@@ -16,6 +16,7 @@ import com.katorabian.service.message.ChatMessageService
 import com.katorabian.service.model.ModelRole
 import com.katorabian.service.model.ModelRouter
 import com.katorabian.service.model.ModelService
+import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.prompt.PromptAssembler
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.session.ChatSessionService
@@ -78,6 +79,8 @@ fun main() {
         sessionService = sessionService
     )
 
+    val executionManager = SessionExecutionManager()
+
     val chatService = ChatService(
         llmClient = chatClient,
         sessionService = sessionService,
@@ -86,7 +89,8 @@ fun main() {
         modelRouter = modelRouter,
         modelService = modelService,
         inputProcessor = inputProcessor,
-        gatekeeper = gatekeeper
+        gatekeeper = gatekeeper,
+        executionManager = executionManager
     )
 
 

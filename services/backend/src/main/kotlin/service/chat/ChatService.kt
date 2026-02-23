@@ -3,6 +3,7 @@ package com.katorabian.service.chat
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.Constants.MAX_SSE_CHUNK_SIZE
+import com.katorabian.domain.UserContext
 import com.katorabian.domain.chat.ChatEvent
 import com.katorabian.llm.LlmClient
 import com.katorabian.service.gatekeeper.ExecutionTarget
@@ -13,6 +14,7 @@ import com.katorabian.service.message.ChatMessageService
 import com.katorabian.service.model.ModelDescriptor
 import com.katorabian.service.model.ModelRouter
 import com.katorabian.service.model.ModelService
+import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.session.ChatSessionService
 import kotlinx.coroutines.withTimeout
@@ -26,7 +28,8 @@ class ChatService(
     private val modelRouter: ModelRouter,
     private val modelService: ModelService,
     private val inputProcessor: UserInputProcessor,
-    private val gatekeeper: Gatekeeper
+    private val gatekeeper: Gatekeeper,
+    private val executionManager: SessionExecutionManager
 ) {
 
     fun createSession(): ChatSession = sessionService.create()
@@ -34,12 +37,14 @@ class ChatService(
     suspend fun sendMessage(
         sessionId: UUID,
         userQuery: String
-    ): ChatMessage {
+    ): ChatMessage = executionManager.execute(
+        UserContext.SINGLE_USER_ID
+    ) {
 
         val session = sessionService.get(sessionId)
         val decision = gatekeeper.interpret(userQuery)
 
-        return inputProcessor.process(
+        return@execute inputProcessor.process(
             session = session,
             input = userQuery,
             decision = decision
@@ -48,10 +53,12 @@ class ChatService(
                 messageService.addAssistantMessage(session.id, userMessage)
             },
             onForwardToLlm = { userMessage ->
+
                 messageService.addUserMessage(session.id, userMessage)
 
                 val chatMessages = promptService.buildPromptForStream(session)
                 val model = defineModel(decision, userQuery, modelService)
+
                 val response = modelService.withInference(model) {
                     llmClient.generate(
                         model = model.id,
@@ -71,7 +78,10 @@ class ChatService(
         sessionId: UUID,
         userQuery: String,
         emit: suspend (ChatEvent) -> Unit
+    ) = executionManager.execute(
+        UserContext.SINGLE_USER_ID
     ) {
+
         emit(ChatEvent.Thinking())
 
         val session = sessionService.get(sessionId)
@@ -94,6 +104,7 @@ class ChatService(
 
                 runCatching {
                     val model = defineModel(decision, userQuery, modelService)
+
                     modelService.withInference(model) {
                         withTimeout(120_000) {
                             llmClient.stream(
@@ -107,6 +118,7 @@ class ChatService(
                             }
                         }
                     }
+
                     emit(ChatEvent.Completed)
 
                     val full = buffer.toString()
@@ -118,7 +130,6 @@ class ChatService(
             }
         )
     }
-
     private fun defineModel(
         decision: GatekeeperDecision,
         userQuery: String,
