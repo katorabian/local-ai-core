@@ -25,16 +25,16 @@ const API_BASE = "http://localhost:8080/api/v1";
 marked.setOptions({
   gfm: true,
   breaks: true,
-  highlight(code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value;
-    }
-    return hljs.highlightAuto(code).value;
-  },
 });
 
 function renderMarkdown(md: string): string {
   return DOMPurify.sanitize(marked.parse(md));
+}
+
+function highlightCode(container: HTMLElement) {
+  container.querySelectorAll("pre code").forEach((block) => {
+    hljs.highlightElement(block as HTMLElement);
+  });
 }
 
 /* ---------- UI ---------- */
@@ -100,7 +100,8 @@ async function loadSessions() {
     });
   });
 
-  document.getElementById("newSession")!
+  document
+    .getElementById("newSession")!
     .addEventListener("click", createSession);
 }
 
@@ -139,6 +140,7 @@ async function loadMessages(sessionId: string) {
     })
     .join("");
 
+  highlightCode(messagesEl);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -160,7 +162,7 @@ async function sendMessage() {
     await loadSessions();
   }
 
-  // user message (plain text, как было)
+  // user message (plain text)
   const userEl = document.createElement("div");
   userEl.className = "message user";
   userEl.textContent = text;
@@ -175,7 +177,6 @@ async function sendMessage() {
   messagesEl.appendChild(assistantEl);
 
   let fullText = "";
-  let firstToken = true;
 
   const response = await fetch(
     `${API_BASE}/chat/sessions/${currentSessionId}/stream`,
@@ -229,6 +230,7 @@ async function sendMessage() {
       if (data.text) {
         fullText += data.text;
         assistantEl.innerHTML = renderMarkdown(fullText);
+        highlightCode(assistantEl);
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
 
