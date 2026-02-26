@@ -1,3 +1,10 @@
+import "./style.css";
+
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import hljs from "highlight.js";
+import "highlight.js/styles/github-dark.css";
+
 type ChatSession = {
   id: string;
   model: string;
@@ -13,7 +20,24 @@ type ChatMessage = {
 
 const API_BASE = "http://localhost:8080/api/v1";
 
-import "./style.css";
+/* ---------- markdown ---------- */
+
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+  highlight(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value;
+    }
+    return hljs.highlightAuto(code).value;
+  },
+});
+
+function renderMarkdown(md: string): string {
+  return DOMPurify.sanitize(marked.parse(md));
+}
+
+/* ---------- UI ---------- */
 
 const app = document.getElementById("app")!;
 app.innerHTML = `
@@ -35,7 +59,6 @@ app.innerHTML = `
           </div>
         </div>
       </div>
-
     </main>
   </div>
 `;
@@ -99,13 +122,24 @@ async function loadMessages(sessionId: string) {
   const messages: ChatMessage[] = await res.json();
 
   messagesEl.innerHTML = messages
-    .map(
-      (m) =>
-        `<div class="message ${m.role}">
+    .map((m) => {
+      if (m.role === "assistant") {
+        return `
+          <div class="message assistant">
+            ${renderMarkdown(m.content)}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="message user">
           ${m.content}
-        </div>`
-    )
+        </div>
+      `;
+    })
     .join("");
+
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 /* ---------- SSE ---------- */
@@ -114,7 +148,6 @@ async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
 
-  // 1️⃣ если нет сессии — создаём автоматически
   if (!currentSessionId) {
     const res = await fetch(`${API_BASE}/chat/sessions`, {
       method: "POST",
@@ -124,38 +157,33 @@ async function sendMessage() {
 
     const data = await res.json();
     currentSessionId = data.sessionId;
-
     await loadSessions();
-    await loadMessages(currentSessionId);
   }
 
-  // временный user message (optimistic UI)
-  const tempUserEl = document.createElement("div");
-  tempUserEl.className = "message user";
-  tempUserEl.textContent = text;
-  tempUserEl.dataset.temp = "true";
-  tempUserEl.dataset.role = "user";
-  tempUserEl.dataset.content = text;
-  messagesEl.appendChild(tempUserEl);
+  // user message (plain text, как было)
+  const userEl = document.createElement("div");
+  userEl.className = "message user";
+  userEl.textContent = text;
+  messagesEl.appendChild(userEl);
 
-  // 2️⃣ очищаем поле ввода
   inputEl.value = "";
 
-  // 3️⃣ подготавливаем место под ответ ассистента
+  // assistant placeholder
   const assistantEl = document.createElement("div");
   assistantEl.className = "message assistant";
   assistantEl.textContent = "thinking...";
   messagesEl.appendChild(assistantEl);
+
+  let fullText = "";
   let firstToken = true;
 
-  // 4️⃣ запускаем POST + SSE
   const response = await fetch(
     `${API_BASE}/chat/sessions/${currentSessionId}/stream`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "text/event-stream",
+        Accept: "text/event-stream",
       },
       body: JSON.stringify({ message: text }),
     }
@@ -175,7 +203,6 @@ async function sendMessage() {
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-
     const events = buffer.split("\n\n");
     buffer = events.pop()!;
 
@@ -184,12 +211,10 @@ async function sendMessage() {
       let dataLine = "";
 
       for (const line of rawEvent.split("\n")) {
-        if (line.startsWith("event:")) {
+        if (line.startsWith("event:"))
           eventType = line.slice(6).trim();
-        }
-        if (line.startsWith("data:")) {
+        if (line.startsWith("data:"))
           dataLine += line.slice(5).trim();
-        }
       }
 
       if (!dataLine) continue;
@@ -202,19 +227,9 @@ async function sendMessage() {
       }
 
       if (data.text) {
-        if (firstToken) {
-          assistantEl.innerHTML = `<b>assistant</b>: `;
-          firstToken = false;
-        }
-        assistantEl.innerHTML += data.text;
+        fullText += data.text;
+        assistantEl.innerHTML = renderMarkdown(fullText);
         messagesEl.scrollTop = messagesEl.scrollHeight;
-        continue;
-      }
-
-      if (data.message) {
-        assistantEl.textContent = `Ошибка: ${data.message}`;
-        reader.cancel();
-        return;
       }
 
       if (eventType === "done") {

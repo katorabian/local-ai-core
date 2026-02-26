@@ -205,3 +205,36 @@ input:focus {
   box-shadow: none !important;
   outline: none !important;
 }
+
+/* === MARKDOWN (НЕ ЛОМАЕТ ДИЗАЙН) === */
+
+.message pre {
+  background: #0d1117;
+  padding: 14px;
+  border-radius: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.message pre code {
+  background: none;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.message code {
+  background: rgba(255,255,255,0.08);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.95em;
+}
+
+.message p {
+  margin: 6px 0;
+}
+
+.message ul,
+.message ol {
+  margin: 6px 0 6px 18px;
+}
