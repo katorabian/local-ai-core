@@ -1,3 +1,5 @@
+/* style.css */
+
 /* === BASE === */
 :root {
   font-family: Inter, system-ui, sans-serif;
@@ -101,8 +103,7 @@ body::before {
   border: 1px solid rgba(255,255,255,0.06);
 }
 
-/* === INPUT BAR (ФИНАЛ, СТАБИЛЬНО) === */
-
+/* === INPUT BAR === */
 .input-wrapper {
   position: sticky;
   bottom: 20px;
@@ -114,41 +115,31 @@ body::before {
 .input-bar {
   width: 100%;
   max-width: 900px;
-
   background: rgb(32, 28, 45);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 20px;
-
   display: flex;
   align-items: center;
   gap: 8px;
-
   padding: 10px 12px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.45);
 }
 
-/* textarea */
 .input-bar textarea {
   flex: 1;
-
   background: transparent;
   border: none;
   outline: none;
   resize: none;
   overflow: hidden;
-
   color: #eaeaea;
   font-size: 14.5px;
   line-height: 1.4;
-
   min-height: 28px;
-  padding-top: 2px;   /* ← ВАЖНО */
-  padding-bottom: 0;
+  padding: 0;
 }
 
-/* кнопки слева и справа */
-
-.input-bar .icon-btn {
+.icon-btn {
   background: transparent;
   border: none;
   width: 28px;
@@ -156,17 +147,16 @@ body::before {
   border-radius: 50%;
   cursor: pointer;
   color: #aaa;
-
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.input-bar .icon-btn:hover {
+.icon-btn:hover {
   background: rgba(255,255,255,0.06);
 }
 
-.input-bar .send-btn {
+.send-btn {
   background: #7c5cff;
   border: none;
   width: 30px;
@@ -174,14 +164,19 @@ body::before {
   border-radius: 50%;
   cursor: pointer;
   color: white;
-
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.input-bar .send-btn:hover {
+.send-btn:hover {
   opacity: 0.9;
+}
+
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* === MARKDOWN === */
@@ -196,13 +191,14 @@ body::before {
 }
 
 .message pre code {
-  background: none;
-  padding: 0;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
 }
 
-.message code {
+.message code:not(pre code) {
   background: rgba(255,255,255,0.08);
   padding: 2px 6px;
   border-radius: 6px;
@@ -226,11 +222,4 @@ body::before {
 
 .copy-btn:hover {
   background: rgba(255,255,255,0.15);
-}
-
-
-.right-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }

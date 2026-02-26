@@ -1,3 +1,4 @@
+// main.ts
 import "./style.css";
 
 import { marked } from "marked";
@@ -31,7 +32,7 @@ function renderMarkdown(md: string): string {
   return DOMPurify.sanitize(marked.parse(md));
 }
 
-/* ---------- highlight + copy ---------- */
+/* ---------- highlight + copy (assistant only) ---------- */
 
 function enhanceCodeBlocks(container: HTMLElement) {
   container.querySelectorAll("pre").forEach((pre) => {
@@ -156,7 +157,7 @@ async function loadMessages(sessionId: string) {
     .map((m) =>
       m.role === "assistant"
         ? `<div class="message assistant">${renderMarkdown(m.content)}</div>`
-        : `<div class="message user">${m.content}</div>`
+        : `<div class="message user">${renderMarkdown(m.content)}</div>`
     )
     .join("");
 
@@ -184,7 +185,7 @@ async function sendMessage() {
 
   const userEl = document.createElement("div");
   userEl.className = "message user";
-  userEl.textContent = text;
+  userEl.innerHTML = renderMarkdown(text);
   messagesEl.appendChild(userEl);
 
   inputEl.value = "";
