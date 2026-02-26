@@ -38,10 +38,8 @@ function enhanceCodeBlocks(container: HTMLElement) {
     const code = pre.querySelector("code");
     if (!code) return;
 
-    // подсветка
     hljs.highlightElement(code as HTMLElement);
 
-    // если кнопка уже есть — не дублируем
     if (pre.querySelector(".copy-btn")) return;
 
     const button = document.createElement("button");
@@ -72,7 +70,11 @@ app.innerHTML = `
         <div class="input-bar">
           <button class="icon-btn">＋</button>
 
-          <input id="input" placeholder="Введите сообщение..." />
+          <textarea
+            id="input"
+            rows="1"
+            placeholder="Введите сообщение..."
+          ></textarea>
 
           <div class="right-actions">
             <button class="icon-btn">🎤</button>
@@ -86,10 +88,17 @@ app.innerHTML = `
 
 const sessionsEl = document.getElementById("sessions")!;
 const messagesEl = document.getElementById("messages")!;
-const inputEl = document.getElementById("input") as HTMLInputElement;
+const inputEl = document.getElementById("input") as HTMLTextAreaElement;
 const sendBtn = document.getElementById("send") as HTMLButtonElement;
 
 let currentSessionId: string | null = null;
+
+/* ---------- helpers ---------- */
+
+function autoResizeTextarea(el: HTMLTextAreaElement) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+}
 
 /* ---------- API ---------- */
 
@@ -121,7 +130,8 @@ async function loadSessions() {
     });
   });
 
-  document.getElementById("newSession")!
+  document
+    .getElementById("newSession")!
     .addEventListener("click", createSession);
 }
 
@@ -178,6 +188,7 @@ async function sendMessage() {
   messagesEl.appendChild(userEl);
 
   inputEl.value = "";
+  autoResizeTextarea(inputEl);
 
   const assistantEl = document.createElement("div");
   assistantEl.className = "message assistant";
@@ -246,8 +257,16 @@ async function sendMessage() {
 /* ---------- events ---------- */
 
 sendBtn.addEventListener("click", sendMessage);
+
+inputEl.addEventListener("input", () => {
+  autoResizeTextarea(inputEl);
+});
+
 inputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendMessage();
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
 });
 
 loadSessions();
