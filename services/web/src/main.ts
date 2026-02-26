@@ -31,9 +31,30 @@ function renderMarkdown(md: string): string {
   return DOMPurify.sanitize(marked.parse(md));
 }
 
-function highlightCode(container: HTMLElement) {
-  container.querySelectorAll("pre code").forEach((block) => {
-    hljs.highlightElement(block as HTMLElement);
+/* ---------- highlight + copy ---------- */
+
+function enhanceCodeBlocks(container: HTMLElement) {
+  container.querySelectorAll("pre").forEach((pre) => {
+    const code = pre.querySelector("code");
+    if (!code) return;
+
+    // подсветка
+    hljs.highlightElement(code as HTMLElement);
+
+    // если кнопка уже есть — не дублируем
+    if (pre.querySelector(".copy-btn")) return;
+
+    const button = document.createElement("button");
+    button.className = "copy-btn";
+    button.textContent = "Copy";
+
+    button.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(code.textContent || "");
+      button.textContent = "Copied";
+      setTimeout(() => (button.textContent = "Copy"), 1200);
+    });
+
+    pre.appendChild(button);
   });
 }
 
@@ -100,8 +121,7 @@ async function loadSessions() {
     });
   });
 
-  document
-    .getElementById("newSession")!
+  document.getElementById("newSession")!
     .addEventListener("click", createSession);
 }
 
@@ -123,24 +143,14 @@ async function loadMessages(sessionId: string) {
   const messages: ChatMessage[] = await res.json();
 
   messagesEl.innerHTML = messages
-    .map((m) => {
-      if (m.role === "assistant") {
-        return `
-          <div class="message assistant">
-            ${renderMarkdown(m.content)}
-          </div>
-        `;
-      }
-
-      return `
-        <div class="message user">
-          ${m.content}
-        </div>
-      `;
-    })
+    .map((m) =>
+      m.role === "assistant"
+        ? `<div class="message assistant">${renderMarkdown(m.content)}</div>`
+        : `<div class="message user">${m.content}</div>`
+    )
     .join("");
 
-  highlightCode(messagesEl);
+  enhanceCodeBlocks(messagesEl);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -162,7 +172,6 @@ async function sendMessage() {
     await loadSessions();
   }
 
-  // user message (plain text)
   const userEl = document.createElement("div");
   userEl.className = "message user";
   userEl.textContent = text;
@@ -170,7 +179,6 @@ async function sendMessage() {
 
   inputEl.value = "";
 
-  // assistant placeholder
   const assistantEl = document.createElement("div");
   assistantEl.className = "message assistant";
   assistantEl.textContent = "thinking...";
@@ -212,25 +220,18 @@ async function sendMessage() {
       let dataLine = "";
 
       for (const line of rawEvent.split("\n")) {
-        if (line.startsWith("event:"))
-          eventType = line.slice(6).trim();
-        if (line.startsWith("data:"))
-          dataLine += line.slice(5).trim();
+        if (line.startsWith("event:")) eventType = line.slice(6).trim();
+        if (line.startsWith("data:")) dataLine += line.slice(5).trim();
       }
 
       if (!dataLine) continue;
 
       const data = JSON.parse(dataLine);
 
-      if (data.message === "thinking") {
-        assistantEl.textContent = "thinking...";
-        continue;
-      }
-
       if (data.text) {
         fullText += data.text;
         assistantEl.innerHTML = renderMarkdown(fullText);
-        highlightCode(assistantEl);
+        enhanceCodeBlocks(assistantEl);
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
 
