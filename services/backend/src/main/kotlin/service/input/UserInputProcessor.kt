@@ -2,6 +2,7 @@ package com.katorabian.service.input
 
 import com.katorabian.domain.ChatSession
 import com.katorabian.service.chat.UserInputResult
+import com.katorabian.service.chat.UserInputResult.*
 import com.katorabian.service.gatekeeper.GatekeeperDecision
 import com.katorabian.service.session.ChatSessionService
 
@@ -20,7 +21,7 @@ class UserInputProcessor(
 
             is UserIntent.Command -> {
                 val command = decision.command
-                    ?: return UserInputResult.SystemMessage(
+                    ?: return SystemMessage(
                         "Команда не распознана."
                     )
 
@@ -29,7 +30,7 @@ class UserInputProcessor(
                     command = command
                 )
 
-                UserInputResult.SystemMessage(response)
+                SystemMessage(response)
             }
 
             is UserIntent.ChangeStyle -> {
@@ -38,14 +39,15 @@ class UserInputProcessor(
                     preset = intent.preset
                 )
 
-                UserInputResult.SystemMessage(
+                SystemMessage(
                     "Хорошо. Теперь я буду отвечать в стиле: ${intent.preset.name.lowercase()}."
                 )
             }
 
             UserIntent.Chat,
-            UserIntent.Code -> {
-                UserInputResult.ForwardToLlm(input)
+            UserIntent.Code,
+            UserIntent.Intimate -> {
+                ForwardToLlm(input)
             }
         }
     }

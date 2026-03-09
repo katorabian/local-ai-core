@@ -47,6 +47,7 @@ class LlmGatekeeper(
                 llmClient.generateCompletion(
                     model = descriptor.id,
                     prompt = buildPrompt(input),
+                    maxTokens = 128
                 )
             }
         }.getOrElse { ex ->
@@ -119,7 +120,6 @@ class LlmGatekeeper(
             .joinToString(ENUM_JOIN_SEPARATOR)
         val intentDescriptions = UserIntent.intentDescriptions
 
-
         val commandSpecs = CommandSpec.entries
             .joinToString(LINE_SEPARATOR) { spec ->
                 when (val args = spec.argsSpec) {
@@ -131,24 +131,29 @@ class LlmGatekeeper(
             }
 
         return """
-Ты — классификатор пользовательского ввода.
-Верни строго один JSON без пояснений.
+You classify user input.
+
+Return ONLY JSON.
+
+Schema:
 
 {
-  "executionTarget": "$executionTargets",
-  "intent": "$intents",
-  "command": { "name": String, "args": [String] } | null
+ "executionTarget": "$executionTargets",
+ "intent": "$intents",
+ "command": { "name": String, "args": [String] } | null
 }
 
-Допустимые intent:
+Rules:
 $intentDescriptions
 
-Допустимые команды:
+Commands:
 $commandSpecs
 
-Ввод:
+User input:
 $input
-        """.trimIndent()
+
+JSON:
+""".trimIndent()
     }
 }
 

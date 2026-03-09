@@ -14,6 +14,6 @@ object ModelPresets {
 
     val Gatekeeper = GatekeeperDescriptor(
         id = "gatekeeper",
-        modelPath = "F:/llm/models/Mistral-Nemo-2407-12B-Thinking-Claude-Gemini-GPT5.2-Uncensored-HERETIC.Q8_0.gguf"
+        modelPath = "F:/llm/models/Qwen3-Gatekeeper-4B-f16-Q4_K_M.gguf"
     )
 }

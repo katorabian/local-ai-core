@@ -5,7 +5,6 @@ import com.katorabian.prompt.BehaviorPrompt
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.elementNames
 
 @Serializable
 sealed interface UserIntent {
@@ -48,20 +47,30 @@ sealed interface UserIntent {
         override val wireName = WIRE
     }
 
+    @Serializable
+    @SerialName(Intimate.WIRE)
+    object Intimate : UserIntent {
+        const val WIRE = "Intimate"
+        override val wireName = WIRE
+    }
+
     companion object {
 
         val supportedVariants = listOf(
             Chat.WIRE,
             Code.WIRE,
             ChangeStyle.WIRE,
-            Command.WIRE
+            Command.WIRE,
+            Intimate.WIRE
         )
 
         val intentDescriptions = """
-- Chat: Обычный диалог
-- Code: Запрос, связанный с программированием
-- ChangeStyle: Изменение стиля ответов
-- Command: Явная команда, начинающаяся с '/'
+- Commands start with '/'
+- If command → intent = Command
+- Style change → intent = ChangeStyle
+- Programming question → intent = Code
+- Erotic or emotional experience -> intent = Intimate
+- Otherwise → Chat
 """.trimIndent()
 
         @OptIn(ExperimentalSerializationApi::class)
@@ -70,6 +79,8 @@ sealed interface UserIntent {
                 Chat.WIRE -> Chat
 
                 Code.WIRE -> Code
+
+                Intimate.WIRE -> Code
 
                 Command.WIRE -> {
                     val cmdName = command?.name ?: EMPTY_STRING

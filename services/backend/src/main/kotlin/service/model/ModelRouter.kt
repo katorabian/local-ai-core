@@ -50,11 +50,15 @@ class ModelRouter(
             UserIntent.Chat ->
                 ModelRole.CHAT
 
+            UserIntent.Intimate ->
+                ModelRole.CHAT
+
             UserIntent.Code ->
                 ModelRole.SMART_REASONING
 
-            is UserIntent.Command,
+            is UserIntent.Command, // just for info. wont execute
             is UserIntent.ChangeStyle ->
                 ModelRole.GATEKEEPER
+
         }
 }
