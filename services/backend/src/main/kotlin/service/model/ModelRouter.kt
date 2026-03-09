@@ -1,16 +1,18 @@
 package com.katorabian.service.model
 
+import com.katorabian.service.input.UserIntent
+
 class ModelRouter(
     private val models: List<ModelDescriptor>,
     private val fallbackOrder: List<ModelRole>
 ) {
 
     fun resolveLocal(
-        input: String,
+        intent: UserIntent,
         modelService: ModelService
     ): ModelDescriptor {
 
-        val desiredRole = InputClassifier.classify(input)
+        val desiredRole: ModelRole = roleForIntent(intent)
 
         // 1. Пробуем модель нужной роли
         models.firstOrNull {
@@ -33,11 +35,26 @@ class ModelRouter(
 
     @Deprecated("Заглушка пока я не придумал как привезти сюда Remote")
     fun resolveRemote(
-        input: String,
+        intent: UserIntent,
         modelService: ModelService
     ): ModelDescriptor {
         error("Remote models are not configured yet")
     }
 
     fun allModels(): List<ModelDescriptor> = models
+
+
+    private fun roleForIntent(intent: UserIntent): ModelRole =
+        when (intent) {
+
+            UserIntent.Chat ->
+                ModelRole.CHAT
+
+            UserIntent.Code ->
+                ModelRole.SMART_REASONING
+
+            is UserIntent.Command,
+            is UserIntent.ChangeStyle ->
+                ModelRole.GATEKEEPER
+        }
 }

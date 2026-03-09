@@ -141,19 +141,19 @@ class ChatService(
 
             ExecutionTarget.REMOTE -> runCatching {
                 modelRouter.resolveRemote(
-                    input = userQuery,
+                    intent = decision.intent,
                     modelService = modelService
                 )
             }.getOrElse {
                 modelRouter.resolveLocal(
-                    input = userQuery,
+                    intent = decision.intent,
                     modelService = modelService
                 )
             }
 
             ExecutionTarget.LOCAL -> {
                 modelRouter.resolveLocal(
-                    input = userQuery,
+                    intent = decision.intent,
                     modelService = modelService
                 )
             }
