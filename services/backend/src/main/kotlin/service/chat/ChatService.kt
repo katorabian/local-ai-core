@@ -2,6 +2,7 @@ package com.katorabian.service.chat
 
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
+import com.katorabian.domain.Constants.MAX_CHAT_SERVICE_REQUEST_TIMEOUT
 import com.katorabian.domain.Constants.MAX_SSE_CHUNK_SIZE
 import com.katorabian.domain.UserContext
 import com.katorabian.domain.chat.ChatEvent
@@ -106,7 +107,7 @@ class ChatService(
                     val model = defineModel(decision, userQuery, modelService)
 
                     modelService.withInference(model) {
-                        withTimeout(120_000) {
+                        withTimeout(MAX_CHAT_SERVICE_REQUEST_TIMEOUT) {
                             llmClient.stream(
                                 model = model.id,
                                 messages = chatMessages

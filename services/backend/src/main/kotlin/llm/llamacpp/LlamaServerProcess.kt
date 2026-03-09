@@ -1,5 +1,6 @@
 package com.katorabian.llm.llamacpp
 
+import com.katorabian.application.printErr
 import com.katorabian.domain.Constants.REQUEST_TIMEOUT_WARMUP_MS
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -57,7 +58,7 @@ abstract class LlamaServerProcess(
                 p.destroyForcibly()
             }
         } catch (ex: Exception) {
-            println(ex.buildSimpleLog())
+            "LlamaServerProcess.stop".printErr(ex)
         } finally {
             process = null
         }
@@ -88,19 +89,13 @@ abstract class LlamaServerProcess(
                     it.get("http://127.0.0.1:$port")
                     return
                 } catch (ex: Exception) {
-                    println(ex.buildSimpleLog())
+                    "LlamaServerProcess.waitUntilReady".printErr(ex)
                     delay(pollDelayMs)
                 }
             }
         }
 
         error("llama-server on port $port did not become ready in $timeoutMs ms")
-    }
-
-    fun Exception.buildSimpleLog(): String {
-        val ex = this
-        val tag = this@LlamaServerProcess::class.simpleName
-        return tag + '\n' + ex.message + '\n' + ex.stackTraceToString()
     }
 
     protected abstract fun buildCommand(exe: File): List<String>
