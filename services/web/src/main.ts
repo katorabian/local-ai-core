@@ -26,10 +26,15 @@ const API_BASE = "http://localhost:8080/api/v1";
 marked.setOptions({
   gfm: true,
   breaks: true,
+  langPrefix: "hljs language-",
 });
 
 function renderMarkdown(md: string): string {
   return DOMPurify.sanitize(marked.parse(md));
+}
+
+function isCodeBlockClosed(text: string): boolean {
+  return (text.match(/```/g) || []).length % 2 === 0;
 }
 
 /* ---------- highlight + copy (assistant only) ---------- */
@@ -242,12 +247,19 @@ async function sendMessage() {
 
       if (data.text) {
         fullText += data.text;
-        assistantEl.innerHTML = renderMarkdown(fullText);
-        enhanceCodeBlocks(assistantEl);
+
+        if (isCodeBlockClosed(fullText)) {
+          assistantEl.innerHTML = renderMarkdown(fullText);
+        } else {
+          assistantEl.textContent = fullText;
+        }
+
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
 
       if (eventType === "done") {
+        assistantEl.innerHTML = renderMarkdown(fullText);
+        enhanceCodeBlocks(assistantEl);
         reader.cancel();
         return;
       }
