@@ -3,6 +3,7 @@ package com.katorabian.application
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.api.model.modelRoutes
+import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
 import com.katorabian.domain.Utils.toFile
 import com.katorabian.llm.gatekeeper.LlmGatekeeper
 import com.katorabian.llm.llamacpp.LlamaChatServer
@@ -94,7 +95,10 @@ fun main() {
     )
 
 
-    embeddedServer(Netty, port = 8080) {
+    embeddedServer(Netty,
+        port = 8080,
+        configure = { responseWriteTimeoutSeconds = MAX_NETTY_REQUEST_TIMEOUT }
+    ) {
         install(ContentNegotiation) {
             json()
         }

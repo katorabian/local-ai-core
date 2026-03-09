@@ -1,18 +1,20 @@
 package com.katorabian.api.chat
 
+import com.katorabian.application.corExcHandler
 import com.katorabian.domain.chat.SendMessageRequest
 import com.katorabian.service.chat.ChatService
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.request.receive
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.withContext
 import java.util.*
 
+private val handler = "chatStreamRoute".corExcHandler()
+
 fun Route.chatStreamRoute(chatService: ChatService) {
-
-    post("/api/v1/chat/sessions/{id}/stream") { _ ->
-
+    post("/api/v1/chat/sessions/{id}/stream") { _ -> withContext(handler) {
         val sessionId = UUID.fromString(call.parameters["id"])
         val message = call.receive<SendMessageRequest>().message
 
@@ -32,5 +34,5 @@ fun Route.chatStreamRoute(chatService: ChatService) {
             write("event: done\ndata: {}\n\n")
             flush()
         }
-    }
+    } }
 }
