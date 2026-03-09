@@ -7,7 +7,7 @@ class LlamaChatServer(
     llamaDir: File,
     modelPath: File,
     port: Int = 8081,
-    ctxSize: Int = 4096,
+    ctxSize: Int = 32000,
 ) : LlamaServerProcess(
     llamaDir = llamaDir,
     modelPath = modelPath,

@@ -10,5 +10,5 @@ inline fun <reified Caller> Caller.extractTag(): String = when (this@extractTag)
 }
 
 inline fun <reified Caller> Caller.corExcHandler() = CoroutineExceptionHandler { _, exception -> this@corExcHandler.printErr(exception) }
-inline fun <reified Caller> Caller.printErr(message: String) = System.err.println(extractTag() + ": " + message)
-inline fun <reified Caller> Caller.printErr(message: Throwable?) = printErr(message?.stackTraceToString()?: "MISSING EXCEPTION")
+inline fun <reified Caller> Caller.printErr(exception: Throwable?) = printErr(exception?.run { message + '\n' + stackTraceToString() }?: "MISSING EXCEPTION")
+inline fun <reified Caller> Caller.printErr(message: String) = System.err.println(extractTag() + '\n' + message)
