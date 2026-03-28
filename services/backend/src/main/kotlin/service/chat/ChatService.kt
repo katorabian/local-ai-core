@@ -1,5 +1,6 @@
 package com.katorabian.service.chat
 
+import com.katorabian.core.model.Model
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.Constants.MAX_CHAT_SERVICE_REQUEST_TIMEOUT
@@ -22,7 +23,7 @@ import kotlinx.coroutines.withTimeout
 import java.util.*
 
 class ChatService(
-    private val llmClient: LlmClient,
+    private val chatModel: Model,
     private val sessionService: ChatSessionService,
     private val messageService: ChatMessageService,
     private val promptService: PromptService,
@@ -58,14 +59,7 @@ class ChatService(
                 messageService.addUserMessage(session.id, userMessage)
 
                 val chatMessages = promptService.buildPromptForStream(session)
-                val model = defineModel(decision, userQuery, modelService)
-
-                val response = modelService.withInference(model) {
-                    llmClient.generate(
-                        model = model.id,
-                        messages = chatMessages
-                    )
-                }
+                val response = chatModel.generate(chatMessages)
 
                 messageService.addAssistantMessage(
                     sessionId = session.id,
@@ -104,18 +98,11 @@ class ChatService(
                 val chatMessages = promptService.buildPromptForStream(session)
 
                 runCatching {
-                    val model = defineModel(decision, userQuery, modelService)
-
-                    modelService.withInference(model) {
-                        withTimeout(MAX_CHAT_SERVICE_REQUEST_TIMEOUT) {
-                            llmClient.stream(
-                                model = model.id,
-                                messages = chatMessages
-                            ) { chunk ->
-                                buffer.append(chunk)
-                                splitForSse(chunk).forEach { safePart ->
-                                    emit(ChatEvent.Token(safePart))
-                                }
+                    withTimeout(MAX_CHAT_SERVICE_REQUEST_TIMEOUT) {
+                        chatModel.stream(chatMessages) { chunk ->
+                            buffer.append(chunk)
+                            splitForSse(chunk).forEach { safePart ->
+                                emit(ChatEvent.Token(safePart))
                             }
                         }
                     }
@@ -130,42 +117,6 @@ class ChatService(
                 }
             }
         )
-    }
-    private fun defineModel(
-        decision: GatekeeperDecision,
-        userQuery: String,
-        modelService: ModelService,
-    ): ModelDescriptor {
-
-        val model = when (decision.executionTarget) {
-
-            ExecutionTarget.REMOTE -> runCatching {
-                modelRouter.resolveRemote(
-                    intent = decision.intent,
-                    modelService = modelService
-                )
-            }.getOrElse {
-                modelRouter.resolveLocal(
-                    intent = decision.intent,
-                    modelService = modelService
-                )
-            }
-
-            ExecutionTarget.LOCAL -> {
-                modelRouter.resolveLocal(
-                    intent = decision.intent,
-                    modelService = modelService
-                )
-            }
-        }
-
-        return model.also {
-            println(
-                "Using model: ${it.id} (${it.role}) | " +
-                        "intent=${decision.intent} | " +
-                        "reason=${decision.reason}"
-            )
-        }
     }
 
     fun getAllSessions(): List<ChatSession> =

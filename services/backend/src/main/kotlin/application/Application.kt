@@ -5,6 +5,7 @@ import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.api.model.modelRoutes
 import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
 import com.katorabian.domain.Utils.toFile
+import com.katorabian.infra.llm.providers.llamacpp.LlamaModel
 import com.katorabian.llm.gatekeeper.LlmGatekeeper
 import com.katorabian.llm.llamacpp.LlamaChatServer
 import com.katorabian.llm.llamacpp.LlamaCppClient
@@ -44,6 +45,10 @@ fun main() {
         port = 8081
     )
     val chatClient = LlamaCppClient(chatServer, "http://localhost:8081")
+    val chatModel = LlamaModel(
+        descriptor = ModelPresets.LocalChat,
+        client = chatClient
+    )
 
     // ===== GATEKEEPER (CPU) =====
     val gatekeeperServer = LlamaGatekeeperServer(
@@ -52,9 +57,13 @@ fun main() {
         port = 8082
     )
     val gatekeeperClient = LlamaCppClient(gatekeeperServer, "http://localhost:8082")
-    val gatekeeper = LlmGatekeeper(
+    val gatekeeperModel = LlamaModel(
         descriptor = ModelPresets.Gatekeeper,
-        llmClient = gatekeeperClient
+        client = gatekeeperClient
+    )
+
+    val gatekeeper = LlmGatekeeper(
+        model = gatekeeperModel
     )
 
 
@@ -83,11 +92,11 @@ fun main() {
     val executionManager = SessionExecutionManager()
 
     val chatService = ChatService(
-        llmClient = chatClient,
+        chatModel = chatModel,
         sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,
-        modelRouter = modelRouter,
+        modelRouter = modelRouter, // временно оставь
         modelService = modelService,
         inputProcessor = inputProcessor,
         gatekeeper = gatekeeper,

@@ -1,5 +1,7 @@
 package com.katorabian.llm.gatekeeper
 
+import com.katorabian.core.model.Model
+import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.Constants.EMPTY_STRING
 import com.katorabian.domain.Constants.ENUM_JOIN_SEPARATOR
 import com.katorabian.domain.Constants.LINE_SEPARATOR
@@ -21,8 +23,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class LlmGatekeeper(
-    private val descriptor: GatekeeperDescriptor,
-    private val llmClient: LlmClient
+    private val model: Model
 ) : Gatekeeper {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -33,21 +34,23 @@ class LlmGatekeeper(
      */
     suspend fun warmUp() {
         runCatching {
-            llmClient.generateCompletion(
-                model = descriptor.id,
-                prompt = "Classify: hello",
-                maxTokens = 8
+            model.generate(
+                messages = listOf(
+                    ChatMessage.system(
+                        buildPrompt("Classify: hello")
+                    )
+                )
             )
         }
     }
 
     override suspend fun interpret(input: String): GatekeeperDecision {
         val rawResponse = runCatching {
-            withTimeout(8_000) {
-                llmClient.generateCompletion(
-                    model = descriptor.id,
-                    prompt = buildPrompt(input),
-                    maxTokens = 128
+            withTimeout(WARM_UP_TIMEOUT) {
+                model.generate(
+                    messages = listOf(
+                        ChatMessage.system(buildPrompt(input))
+                    )
                 )
             }
         }.getOrElse { ex ->
@@ -154,6 +157,10 @@ $input
 
 JSON:
 """.trimIndent()
+    }
+
+    companion object {
+        private const val WARM_UP_TIMEOUT = 8_000L
     }
 }
 
