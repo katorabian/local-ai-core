@@ -2,7 +2,6 @@ package com.katorabian.application
 
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
-import com.katorabian.api.model.modelRoutes
 import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
 import com.katorabian.domain.Utils.toFile
 import com.katorabian.infra.llm.providers.llamacpp.LlamaModel
@@ -15,9 +14,6 @@ import com.katorabian.service.chat.ChatService
 import com.katorabian.service.input.CommandExecutor
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
-import com.katorabian.service.model.ModelRole
-import com.katorabian.service.model.ModelRouter
-import com.katorabian.service.model.ModelService
 import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.prompt.PromptAssembler
 import com.katorabian.service.prompt.PromptService
@@ -68,13 +64,6 @@ fun main() {
 
 
     // ===== OTHER =====
-    val models = listOf(ModelPresets.LocalChat)
-    val modelService = ModelService(models)
-    val modelRouter = ModelRouter(
-        models = models,
-        fallbackOrder = listOf(ModelRole.CHAT)
-    )
-
     val store = ChatSessionStore()
     val sessionService = ChatSessionService(store)
     val messageService = ChatMessageService(store)
@@ -93,13 +82,11 @@ fun main() {
 
     val chatService = ChatService(
         chatModel = chatModel,
+        gatekeeper = gatekeeper,
         sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,
-        modelRouter = modelRouter, // временно оставь
-        modelService = modelService,
         inputProcessor = inputProcessor,
-        gatekeeper = gatekeeper,
         executionManager = executionManager
     )
 
@@ -127,8 +114,6 @@ fun main() {
 
             chatSessionRoutes(chatService)
             chatStreamRoute(chatService)
-
-            modelRoutes(modelService)
         }
 
         environment.monitor.subscribe(ApplicationStarted) {

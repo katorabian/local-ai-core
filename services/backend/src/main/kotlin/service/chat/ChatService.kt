@@ -7,15 +7,9 @@ import com.katorabian.domain.Constants.MAX_CHAT_SERVICE_REQUEST_TIMEOUT
 import com.katorabian.domain.Constants.MAX_SSE_CHUNK_SIZE
 import com.katorabian.domain.UserContext
 import com.katorabian.domain.chat.ChatEvent
-import com.katorabian.llm.LlmClient
-import com.katorabian.service.gatekeeper.ExecutionTarget
 import com.katorabian.service.gatekeeper.Gatekeeper
-import com.katorabian.service.gatekeeper.GatekeeperDecision
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
-import com.katorabian.service.model.ModelDescriptor
-import com.katorabian.service.model.ModelRouter
-import com.katorabian.service.model.ModelService
 import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.prompt.PromptService
 import com.katorabian.service.session.ChatSessionService
@@ -24,13 +18,11 @@ import java.util.*
 
 class ChatService(
     private val chatModel: Model,
+    private val gatekeeper: Gatekeeper,
     private val sessionService: ChatSessionService,
     private val messageService: ChatMessageService,
     private val promptService: PromptService,
-    private val modelRouter: ModelRouter,
-    private val modelService: ModelService,
     private val inputProcessor: UserInputProcessor,
-    private val gatekeeper: Gatekeeper,
     private val executionManager: SessionExecutionManager
 ) {
 
