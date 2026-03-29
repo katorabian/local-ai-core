@@ -1,16 +1,17 @@
-package com.katorabian.service.prompt
+package com.katorabian.core.prompt
 
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
+import com.katorabian.service.prompt.PromptAssembler
 import com.katorabian.storage.ChatSessionStore
 
-class PromptService(
+class PromptBuilder(
     private val store: ChatSessionStore,
     private val assembler: PromptAssembler
 ) {
 
 
-    fun buildPromptForStream(
+    fun build(
         session: ChatSession,
         taskHints: List<String> = emptyList()
     ): List<ChatMessage> {

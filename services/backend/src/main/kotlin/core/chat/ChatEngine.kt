@@ -1,21 +1,20 @@
 package com.katorabian.core.chat
 
-import com.katorabian.core.model.Model
+import com.katorabian.core.model.ModelSelector
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.chat.ChatEvent
-import com.katorabian.service.chat.UserInputResult
 import com.katorabian.service.gatekeeper.Gatekeeper
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
-import com.katorabian.service.prompt.PromptService
+import com.katorabian.core.prompt.PromptBuilder
 import kotlinx.coroutines.withTimeout
 
 class ChatEngine(
-    private val chatModel: Model,
+    private val modelSelector: ModelSelector,
     private val gatekeeper: Gatekeeper,
     private val messageService: ChatMessageService,
-    private val promptService: PromptService,
+    private val promptBuilder: PromptBuilder,
     private val inputProcessor: UserInputProcessor
 ) {
 
@@ -38,9 +37,9 @@ class ChatEngine(
 
                 messageService.addUserMessage(session.id, userMessage)
 
-                val messages = promptService.buildPromptForStream(session)
-
-                val response = chatModel.generate(messages)
+                val messages = promptBuilder.build(session)
+                val model = modelSelector.select(decision)
+                val response = model.generate(messages)
 
                 messageService.addAssistantMessage(session.id, response)
             }
@@ -69,13 +68,13 @@ class ChatEngine(
 
                 messageService.addUserMessage(session.id, userMessage)
 
-                val messages = promptService.buildPromptForStream(session)
-
+                val messages = promptBuilder.build(session)
                 val buffer = StringBuilder()
 
                 runCatching {
                     withTimeout(120_000) {
-                        chatModel.stream(messages) { chunk ->
+                        val model = modelSelector.select(decision)
+                        model.stream(messages) { chunk ->
                             buffer.append(chunk)
                             emit(ChatEvent.Token(chunk))
                         }

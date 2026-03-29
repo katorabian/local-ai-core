@@ -3,6 +3,7 @@ package com.katorabian.application
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.core.chat.ChatEngine
+import com.katorabian.core.model.ModelSelector
 import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
 import com.katorabian.domain.Utils.toFile
 import com.katorabian.infra.llm.providers.llamacpp.LlamaModel
@@ -17,7 +18,7 @@ import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
 import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.prompt.PromptAssembler
-import com.katorabian.service.prompt.PromptService
+import com.katorabian.core.prompt.PromptBuilder
 import com.katorabian.service.session.ChatSessionService
 import com.katorabian.storage.ChatSessionStore
 import io.ktor.http.*
@@ -70,7 +71,7 @@ fun main() {
     val messageService = ChatMessageService(store)
 
     val promptAssembler = PromptAssembler(PromptConfigFactory())
-    val promptService = PromptService(store, promptAssembler)
+    val promptBuilder = PromptBuilder(store, promptAssembler)
 
     // commands
     val commandExecutor = CommandExecutor(sessionService)
@@ -79,15 +80,18 @@ fun main() {
         sessionService = sessionService
     )
 
-    val executionManager = SessionExecutionManager()
-
-    val engine = ChatEngine(
+    val modelSelector = ModelSelector(
         chatModel = chatModel,
+        reasoningModel = null // пока нет — не выдумываем
+    )
+    val engine = ChatEngine(
+        modelSelector = modelSelector,
         gatekeeper = gatekeeper,
         messageService = messageService,
-        promptService = promptService,
+        promptBuilder = promptBuilder,
         inputProcessor = inputProcessor
     )
+    val executionManager = SessionExecutionManager()
 
     val chatService = ChatService(
         engine = engine,
