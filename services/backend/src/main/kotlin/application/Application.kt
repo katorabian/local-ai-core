@@ -2,26 +2,7 @@ package com.katorabian.application
 
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
-import com.katorabian.core.chat.ChatEngine
-import com.katorabian.core.model.ModelSelector
-import com.katorabian.core.prompt.PromptBuilder
-import com.katorabian.core.repository.ChatRepository
 import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
-import com.katorabian.domain.Utils.toFile
-import com.katorabian.infra.llm.providers.llamacpp.LlamaModel
-import com.katorabian.infra.storage.InMemoryChatRepository
-import com.katorabian.llm.gatekeeper.LlmGatekeeper
-import com.katorabian.llm.llamacpp.LlamaChatServer
-import com.katorabian.llm.llamacpp.LlamaCppClient
-import com.katorabian.llm.llamacpp.LlamaGatekeeperServer
-import com.katorabian.prompt.PromptConfigFactory
-import com.katorabian.service.chat.ChatService
-import com.katorabian.service.input.CommandExecutor
-import com.katorabian.service.input.UserInputProcessor
-import com.katorabian.service.message.ChatMessageService
-import com.katorabian.service.orchestration.SessionExecutionManager
-import com.katorabian.service.prompt.PromptAssembler
-import com.katorabian.service.session.ChatSessionService
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -32,99 +13,43 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.launch
-import java.io.File
 
 fun main() {
-    val llamaDir = File("F:/llm/llama.cpp-12.4")
+    val components = AppModule.build()
 
-    // ===== CHAT (GPU) =====
-    val chatServer = LlamaChatServer(
-        llamaDir = llamaDir,
-        modelPath = ModelPresets.LocalChat.modelPath.toFile(),
-        port = 8081
-    )
-    val chatClient = LlamaCppClient(chatServer, "http://localhost:8081")
-    val chatModel = LlamaModel(
-        descriptor = ModelPresets.LocalChat,
-        client = chatClient
-    )
-
-    // ===== GATEKEEPER (CPU) =====
-    val gatekeeperServer = LlamaGatekeeperServer(
-        llamaDir = llamaDir,
-        modelPath = ModelPresets.Gatekeeper.modelPath.toFile(),
-        port = 8082
-    )
-    val gatekeeperClient = LlamaCppClient(gatekeeperServer, "http://localhost:8082")
-    val gatekeeperModel = LlamaModel(
-        descriptor = ModelPresets.Gatekeeper,
-        client = gatekeeperClient
-    )
-
-    val gatekeeper = LlmGatekeeper(
-        model = gatekeeperModel
-    )
-
-
-    // ===== OTHER =====
-    val repo: ChatRepository = InMemoryChatRepository()
-    val sessionService = ChatSessionService(repo)
-    val messageService = ChatMessageService(repo)
-
-    val promptAssembler = PromptAssembler(PromptConfigFactory())
-    val promptBuilder = PromptBuilder(repo, promptAssembler)
-
-    // commands
-    val commandExecutor = CommandExecutor(sessionService)
-    val inputProcessor = UserInputProcessor(
-        commandExecutor = commandExecutor,
-        sessionService = sessionService
-    )
-
-    val modelSelector = ModelSelector(
-        chatModel = chatModel,
-        reasoningModel = null // пока нет — не выдумываем
-    )
-    val engine = ChatEngine(
-        modelSelector = modelSelector,
-        gatekeeper = gatekeeper,
-        messageService = messageService,
-        promptBuilder = promptBuilder,
-        inputProcessor = inputProcessor
-    )
-    val executionManager = SessionExecutionManager()
-
-    val chatService = ChatService(
-        engine = engine,
-        sessionService = sessionService,
-        messageService = messageService,
-        executionManager = executionManager
-    )
+    val chatService = components.chatService
+    val gatekeeper = components.gatekeeper
 
 
     embeddedServer(Netty,
         port = 8080,
-        configure = { responseWriteTimeoutSeconds = MAX_NETTY_REQUEST_TIMEOUT }
+        configure = { // Таймаут на запись ответа, чтобы соединение не обрывалось
+            responseWriteTimeoutSeconds = MAX_NETTY_REQUEST_TIMEOUT
+        }
     ) {
         install(ContentNegotiation) {
             json()
         }
 
         install(CORS) {
-            allowHost("localhost:5173")
+            allowHost("localhost:5173") // Разрешаем фронту ходить к бэку
+            // Разрешённые HTTP-методы
             allowMethod(HttpMethod.Get)
             allowMethod(HttpMethod.Post)
+            // Разрешённые заголовки
             allowHeader(HttpHeaders.ContentType)
+            // Разрешаем куки / авторизацию
             allowCredentials = true
         }
 
         routing {
+            // Простой health-check (для мониторинга или docker healthcheck)
             get("/health") {
                 call.respondText("OK")
             }
 
-            chatSessionRoutes(chatService)
-            chatStreamRoute(chatService)
+            chatSessionRoutes(chatService) // REST API для работы с чат-сессиями
+            chatStreamRoute(chatService) // SSE стриминг ответов модели
         }
 
         environment.monitor.subscribe(ApplicationStarted) {

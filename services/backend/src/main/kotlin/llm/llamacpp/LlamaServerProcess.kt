@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 abstract class LlamaServerProcess(
     protected val llamaDir: File,
     protected val modelPath: File,
-    protected val port: Int,
+    val port: Int,
     protected val ctxSize: Int,
 ) {
 
