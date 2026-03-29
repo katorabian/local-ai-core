@@ -2,6 +2,7 @@ package com.katorabian.application
 
 import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
+import com.katorabian.core.chat.ChatEngine
 import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
 import com.katorabian.domain.Utils.toFile
 import com.katorabian.infra.llm.providers.llamacpp.LlamaModel
@@ -80,13 +81,17 @@ fun main() {
 
     val executionManager = SessionExecutionManager()
 
-    val chatService = ChatService(
+    val engine = ChatEngine(
         chatModel = chatModel,
         gatekeeper = gatekeeper,
-        sessionService = sessionService,
         messageService = messageService,
         promptService = promptService,
-        inputProcessor = inputProcessor,
+        inputProcessor = inputProcessor
+    )
+
+    val chatService = ChatService(
+        engine = engine,
+        sessionService = sessionService,
         executionManager = executionManager
     )
 
