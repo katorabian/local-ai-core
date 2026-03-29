@@ -1,37 +1,29 @@
 package com.katorabian.service.message
 
+import com.katorabian.core.repository.ChatRepository
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.enum.Role
-import com.katorabian.storage.ChatSessionStore
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 class ChatMessageService(
-    private val store: ChatSessionStore
+    private val repo: ChatRepository
 ) {
 
     fun addUserMessage(
         sessionId: UUID,
         content: String
     ): ChatMessage =
-        addMessage(
-            sessionId = sessionId,
-            role = Role.USER,
-            content = content
-        )
+        addMessage(sessionId, Role.USER, content)
 
     fun addAssistantMessage(
         sessionId: UUID,
         content: String
     ): ChatMessage =
-        addMessage(
-            sessionId = sessionId,
-            role = Role.ASSISTANT,
-            content = content
-        )
+        addMessage(sessionId, Role.ASSISTANT, content)
 
     fun getMessages(sessionId: UUID): List<ChatMessage> =
-        store.getMessages(sessionId)
+        repo.getMessages(sessionId)
 
     private fun addMessage(
         sessionId: UUID,
@@ -45,7 +37,7 @@ class ChatMessageService(
             content = content,
             createdAt = Instant.now()
         )
-        store.addMessage(message)
+        repo.addMessage(message)
         return message
     }
 }

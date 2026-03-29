@@ -5,6 +5,7 @@ import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.UserContext
 import com.katorabian.domain.chat.ChatEvent
+import com.katorabian.service.message.ChatMessageService
 import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.session.ChatSessionService
 import java.util.*
@@ -12,6 +13,7 @@ import java.util.*
 class ChatService(
     private val engine: ChatEngine,
     private val sessionService: ChatSessionService,
+    private val messageService: ChatMessageService,
     private val executionManager: SessionExecutionManager
 ) {
 
@@ -54,6 +56,4 @@ class ChatService(
         sessionService.get(sessionId)
 
     fun getSessionMessages(sessionId: UUID): List<ChatMessage> =
-        sessionService.get(sessionId)
-            .let { emptyList() } //TODO
-}
+        messageService.getMessages(sessionId)}

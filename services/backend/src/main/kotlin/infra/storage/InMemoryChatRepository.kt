@@ -1,40 +1,41 @@
-package com.katorabian.storage
+package com.katorabian.infra.storage
 
+import com.katorabian.core.repository.ChatRepository
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.enum.Role
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class ChatSessionStore {
+class InMemoryChatRepository : ChatRepository {
 
     private val sessions = ConcurrentHashMap<UUID, ChatSession>()
     private val messages = ConcurrentHashMap<UUID, MutableList<ChatMessage>>()
 
-    fun createSession(session: ChatSession) {
+    override fun createSession(session: ChatSession) {
         sessions[session.id] = session
         messages[session.id] = mutableListOf()
     }
 
-    fun getSession(id: UUID): ChatSession? = sessions[id]
+    override fun getSession(id: UUID): ChatSession? = sessions[id]
 
-    fun updateSession(session: ChatSession) {
+    override fun getAllSessions(): List<ChatSession> =
+        sessions.values.sortedBy { it.createdAt }
+
+    override fun updateSession(session: ChatSession) {
         require(sessions.containsKey(session.id)) {
             "Session not found"
         }
         sessions[session.id] = session
     }
 
-    fun addMessage(message: ChatMessage) {
+    override fun addMessage(message: ChatMessage) {
         require(message.role != Role.SYSTEM) {
-            "SYSTEM messages must not be stored in session history"
+            "SYSTEM messages must not be stored"
         }
         messages[message.sessionId]?.add(message)
     }
 
-    fun getMessages(sessionId: UUID): List<ChatMessage> =
+    override fun getMessages(sessionId: UUID): List<ChatMessage> =
         messages[sessionId]?.toList() ?: emptyList()
-
-    fun getAllSessions(): List<ChatSession> =
-        sessions.values.sortedBy { it.createdAt }
 }

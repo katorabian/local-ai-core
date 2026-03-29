@@ -4,9 +4,12 @@ import com.katorabian.api.chat.chatSessionRoutes
 import com.katorabian.api.chat.chatStreamRoute
 import com.katorabian.core.chat.ChatEngine
 import com.katorabian.core.model.ModelSelector
+import com.katorabian.core.prompt.PromptBuilder
+import com.katorabian.core.repository.ChatRepository
 import com.katorabian.domain.Constants.MAX_NETTY_REQUEST_TIMEOUT
 import com.katorabian.domain.Utils.toFile
 import com.katorabian.infra.llm.providers.llamacpp.LlamaModel
+import com.katorabian.infra.storage.InMemoryChatRepository
 import com.katorabian.llm.gatekeeper.LlmGatekeeper
 import com.katorabian.llm.llamacpp.LlamaChatServer
 import com.katorabian.llm.llamacpp.LlamaCppClient
@@ -18,9 +21,7 @@ import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
 import com.katorabian.service.orchestration.SessionExecutionManager
 import com.katorabian.service.prompt.PromptAssembler
-import com.katorabian.core.prompt.PromptBuilder
 import com.katorabian.service.session.ChatSessionService
-import com.katorabian.storage.ChatSessionStore
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -66,12 +67,12 @@ fun main() {
 
 
     // ===== OTHER =====
-    val store = ChatSessionStore()
-    val sessionService = ChatSessionService(store)
-    val messageService = ChatMessageService(store)
+    val repo: ChatRepository = InMemoryChatRepository()
+    val sessionService = ChatSessionService(repo)
+    val messageService = ChatMessageService(repo)
 
     val promptAssembler = PromptAssembler(PromptConfigFactory())
-    val promptBuilder = PromptBuilder(store, promptAssembler)
+    val promptBuilder = PromptBuilder(repo, promptAssembler)
 
     // commands
     val commandExecutor = CommandExecutor(sessionService)
@@ -96,6 +97,7 @@ fun main() {
     val chatService = ChatService(
         engine = engine,
         sessionService = sessionService,
+        messageService = messageService,
         executionManager = executionManager
     )
 

@@ -1,13 +1,13 @@
 package com.katorabian.service.session
 
+import com.katorabian.core.repository.ChatRepository
 import com.katorabian.domain.ChatSession
 import com.katorabian.prompt.BehaviorPrompt
-import com.katorabian.storage.ChatSessionStore
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 class ChatSessionService(
-    private val store: ChatSessionStore
+    private val repo: ChatRepository
 ) {
 
     fun create(): ChatSession {
@@ -16,16 +16,16 @@ class ChatSessionService(
             behaviorPreset = BehaviorPrompt.Preset.NEUTRAL,
             createdAt = Instant.now()
         )
-        store.createSession(session)
+        repo.createSession(session)
         return session
     }
 
     fun get(sessionId: UUID): ChatSession =
-        store.getSession(sessionId)
+        repo.getSession(sessionId)
             ?: error("Session not found")
 
     fun list(): List<ChatSession> =
-        store.getAllSessions()
+        repo.getAllSessions()
 
     fun updateBehavior(
         sessionId: UUID,
@@ -37,7 +37,7 @@ class ChatSessionService(
             behaviorPreset = preset
         )
 
-        store.updateSession(updated)
+        repo.updateSession(updated)
         return updated
     }
 

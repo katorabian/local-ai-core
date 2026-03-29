@@ -1,12 +1,12 @@
 package com.katorabian.core.prompt
 
+import com.katorabian.core.repository.ChatRepository
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.service.prompt.PromptAssembler
-import com.katorabian.storage.ChatSessionStore
 
 class PromptBuilder(
-    private val store: ChatSessionStore,
+    private val repository: ChatRepository,
     private val assembler: PromptAssembler
 ) {
 
@@ -15,7 +15,7 @@ class PromptBuilder(
         session: ChatSession,
         taskHints: List<String> = emptyList()
     ): List<ChatMessage> {
-        val history = store.getMessages(session.id)
+        val history = repository.getMessages(session.id)
         return assembler.assemble(
             session = session,
             history = history,
