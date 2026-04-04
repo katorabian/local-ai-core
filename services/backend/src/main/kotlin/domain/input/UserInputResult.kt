@@ -1,4 +1,4 @@
-package com.katorabian.service.chat
+package com.katorabian.domain.input
 
 sealed interface UserInputResult {
 

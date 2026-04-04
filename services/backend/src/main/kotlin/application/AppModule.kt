@@ -67,7 +67,7 @@ object AppModule {
 
         // ===== PROMPT =====
         val promptAssembler = PromptAssembler(PromptConfigFactory())
-        val promptBuilder = PromptBuilder(repo, promptAssembler)
+        val promptBuilder = PromptBuilder(promptAssembler)
 
         // ===== INPUT =====
         val commandExecutor = CommandExecutor(sessionService)

@@ -1,13 +1,13 @@
 package com.katorabian.core.chat
 
 import com.katorabian.core.model.ModelSelector
+import com.katorabian.core.prompt.PromptBuilder
 import com.katorabian.domain.ChatMessage
 import com.katorabian.domain.ChatSession
 import com.katorabian.domain.chat.ChatEvent
 import com.katorabian.service.gatekeeper.Gatekeeper
 import com.katorabian.service.input.UserInputProcessor
 import com.katorabian.service.message.ChatMessageService
-import com.katorabian.core.prompt.PromptBuilder
 import kotlinx.coroutines.withTimeout
 
 class ChatEngine(
@@ -37,7 +37,8 @@ class ChatEngine(
 
                 messageService.addUserMessage(session.id, userMessage)
 
-                val messages = promptBuilder.build(session)
+                val history = messageService.getMessages(session.id)
+                val messages = promptBuilder.build(session, history)
                 val model = modelSelector.select(decision)
                 val response = model.generate(messages)
 
@@ -68,7 +69,9 @@ class ChatEngine(
 
                 messageService.addUserMessage(session.id, userMessage)
 
-                val messages = promptBuilder.build(session)
+                val history = messageService.getMessages(session.id)
+                val messages = promptBuilder.build(session, history)
+
                 val buffer = StringBuilder()
 
                 runCatching {
